@@ -135,7 +135,7 @@ checks will measure how well this works at realistic trial counts.
 depends on the prior on $E$ (HalfNormal(1)). That prior is part of the
 specification and should be reported with any model-comparison result.
 
-## Qualitative patterns the simulator must reproduce
+## Qualitative patterns
 
 These come from Strickland et al. (2021, 2023). The numbers below were computed by
 us from the 2023 OSF data for participants 1–24, as accuracy and mean RT including
@@ -147,12 +147,35 @@ errors:
 | 75% aid | 0.885 | 0.784 | 1.90 s | 2.01 s |
 | 95% aid | 0.948 | 0.498 | 1.73 s | 2.04 s |
 
-1. Accuracy rises when the aid is right and falls when it is wrong, compared
-   with unaided trials.
-2. Correct responses slow down when the aid is wrong (inhibition of the correct
-   accumulator).
-3. Misuse (following wrong advice) increases with excitation.
-4. With $E = 0$, wrong advice slows responses but advice can never produce a
-   response on its own.
+`tests/test_simulators.py` checks the simulators against these patterns across
+prior draws. Each operator is simulated twice on the same stimuli with the same
+random numbers, once with a 75%-reliable aid and once unaided, so each aided trial
+has an unaided twin.
+
+1. **Accuracy rises when the aid is right and falls when it is wrong.** This holds
+   for every draw of every model, trial by trial.
+2. **Correct responses slow down when the aid is wrong.** Under the advisory model
+   the expected (mean) correct RT, computed exactly from the likelihood, is slower
+   for all 300 prior draws × 2 stimulus types checked. Simulated median slowing is
+   positive wherever inhibition ≥ 0.3. Under the reliance model the slowing holds
+   when inhibition dominates (inhibition ≥ 2 × excitation): this held for all 538
+   such draw × stimulus cells checked exactly, and in simulation. With strong excitation and weak inhibition, correct responses on
+   wrong-advice trials are **faster**. Only fast correct responses can beat an
+   excited error accumulator. So the RT cost of wrong advice in both source
+   studies is a signature of inhibition, which agrees with the papers' conclusions.
+3. **Misuse rises with excitation.** This holds trial by trial for every draw.
+4. **Without excitation, advice cannot trigger a decision.** Under the advisory
+   model, every aided trial is at least as slow as its unaided twin. With
+   excitation, some aided decisions come faster than they would unaided.
+5. **Lower aided thresholds speed up aided trials.**
+
+Two cautions for analyzing RTs, real or simulated:
+
+- **Compare per stimulus type.** Pooling stimuli of different difficulty can
+  reverse an RT effect (Simpson's paradox). In one prior draw, wrong advice slowed
+  correct responses to both stimulus types, but the pooled mean got faster,
+  because correct answers to the slower, harder stimulus became rarer.
+- **Prefer medians to means** for simulated data, because of the long RT tail
+  described in [README.md](README.md#prior-predictive-check).
 
 References are listed in [README.md](README.md#references).

@@ -21,6 +21,7 @@ from scipy import stats
 
 from relyflow.data import NO_ADVICE
 from relyflow.models.base import AutomationModel, Parameter, truncnorm
+from relyflow.models.lba import race_density, sample_race
 
 _ACCUMULATORS = np.array([0, 1])
 
@@ -136,8 +137,39 @@ class StaticAccumulator(AutomationModel):
         effects = advice_effects(advice, excitation[:, None], params["inhibition"][:, None])
         return unaided_rate_means(params, stimulus) + effects
 
+    def race_inputs(
+        self, params: Mapping[str, np.ndarray], stimulus: np.ndarray, advice: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Mean rates, rate SDs and thresholds, each ``(n_sims, n_trials, 2)``."""
+        stimulus, advice = as_design(stimulus, advice)
+        return (
+            self.rate_means(params, stimulus, advice),
+            rate_sds(params, stimulus),
+            thresholds(params, advice),
+        )
+
     def simulate(self, params, stimulus, advice, rng):
-        raise NotImplementedError("The LBA race simulator is roadmap milestone 2.")
+        means, sds, bounds = self.race_inputs(params, stimulus, advice)
+        return sample_race(rng, means, sds, bounds, params["A"][:, None], params["t0"][:, None])
+
+    def log_likelihood(
+        self,
+        params: Mapping[str, np.ndarray],
+        stimulus: np.ndarray,
+        advice: np.ndarray,
+        choice: np.ndarray,
+        rt: np.ndarray,
+    ) -> np.ndarray:
+        """Exact log-likelihood of each parameter set given the trials, shape ``(n_sims,)``.
+
+        Trials broadcast like the design, so one operator's data can be scored
+        against many parameter sets at once.
+        """
+        means, sds, bounds = self.race_inputs(params, stimulus, advice)
+        density = race_density(
+            choice, rt, means, sds, bounds, params["A"][:, None], params["t0"][:, None]
+        )
+        return np.log(np.maximum(density, np.finfo(np.float64).tiny)).sum(axis=-1)
 
 
 class Advisory(StaticAccumulator):

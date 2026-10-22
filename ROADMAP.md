@@ -25,26 +25,33 @@ Specs with sources, equations, parameters and priors are in [docs/models/](docs/
 mean-rate and threshold mappings, tested against the papers' definitions. The
 race simulator is a stub until milestone 2.
 
-## 2. Validated simulators
+## 2. Validated simulators ✅
 
-- [ ] Vectorized NumPy LBA race simulator, one call for many operators × many trials,
-      built on the mean-rate and threshold mappings from milestone 1.
-- [ ] Prior predictive checks with the validated simulator (milestone 1 ran only a
-      preliminary check), including whether a time-scale option is needed for tasks
-      much faster or slower than 0.5–3 s.
-- [ ] Qualitative-pattern tests: higher accuracy when the aid is right; slower correct
-      responses when the aid is wrong; misuse rising with excitation; learned trust
-      tracking the aid's running reliability and dropping after aid failures. Target
-      values are in [docs/models/static.md](docs/models/static.md).
-- [ ] Where a likelihood exists, check simulated choice and RT distributions against it.
-- [ ] Throughput benchmark, so that training-set size is not limited by simulation.
+Results are in [docs/models/](docs/models/README.md#simulators-and-likelihood).
 
-**Done when** the pattern tests pass across the prior range and simulated data from
-each model match its analytic likelihood (where one exists) by a goodness-of-fit test.
+- [x] Vectorized NumPy LBA race simulator (`relyflow.models.lba`), plus an exact,
+      vectorized `log_likelihood` for all three models.
+- [x] Design generator (`relyflow.make_design`) for unaided and aided blocks with
+      exact aid-error counts.
+- [x] Sampler checked against the analytic density by chi-square goodness of fit in
+      four regimes. The tests catch planted bugs, including a 10% rate-SD error.
+- [x] Qualitative-pattern tests across prior draws, using paired aided/unaided twins
+      with common random numbers. Findings: the RT cost of wrong advice is a
+      signature of inhibition and can reverse under strong excitation; pooled RT
+      effects can reverse across stimulus types (Simpson's paradox).
+- [x] Learning signatures: less following right after an aid failure, and less
+      misuse after reliability drops. The static model shows neither.
+- [x] Prior predictive checks: the priors cover the 2023 data. Time scale decided:
+      RTs will be expressed in task-specific units at fit and simulation time
+      (milestones 6–7) instead of widening the priors.
+- [x] Throughput: about 6M trials/s per core for every model (`benchmarks/simulators.py`).
 
 ## 3. Amortized inference networks
 
 - [ ] Training-set generation with fixed seeds and saved configs.
+- [ ] Handle the LBA's long RT tail (infinite RT variance; 0.5–0.8% of simulated
+      trials over 10 s): censor at a task deadline and/or summarize log RTs, and
+      match whatever preprocessing real data get.
 - [ ] Static models: permutation-invariant set encoder (e.g. SetTransformer or DeepSet)
       feeding a normalizing-flow or flow-matching posterior.
 - [ ] Learning model: sequence-aware summary network, because trial order carries the
@@ -60,8 +67,10 @@ in under a few seconds on a laptop CPU.
 - [ ] Parameter recovery: posterior mean vs. truth, R², NRMSE, posterior contraction.
 - [ ] Simulation-based calibration: rank histograms and ECDF difference plots.
 - [ ] Posterior predictive checks on accuracy, RT quantiles, misuse and disuse.
-- [ ] MCMC benchmark for the static model (tractable likelihood): compare amortized and
-      NUTS posteriors (means, SDs, distributional distance) and wall-clock time.
+- [ ] MCMC benchmark: compare amortized and NUTS posteriors (means, SDs,
+      distributional distance) and wall-clock time. All three models have exact
+      likelihoods (`model.log_likelihood`), so the learning model can be
+      benchmarked too, not just the static ones.
 
 **Done when** all diagnostics are produced by one command and pass for every model, and
 the benchmark results are recorded in the docs.

@@ -92,6 +92,17 @@ there.
   needs a sequence-aware summary network rather than the set encoder used for the
   static models (milestone 3).
 
+## Simulated behavior
+
+`tests/test_simulators.py` checks two signatures of learning, with the reliance
+model as a control. The table is from one run of 2,000 simulated operators with
+`r0` = 0.8, `alpha` = 0.3, and excitation = inhibition = 1.5:
+
+| | Learning | Reliance (control) |
+| --- | --- | --- |
+| Follows advice after the aid was wrong vs. right (80% aid) | 0.78 vs. 0.90 | 0.94 vs. 0.94 |
+| Misuse with a 95% aid, then late in a 60% block | 0.65 → 0.28 | 0.71 → 0.72 |
+
 ## Variants not implemented
 
 - **Two-kernel delta rule**, the best fit to reliability judgments in Strickland

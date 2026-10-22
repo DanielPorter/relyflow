@@ -103,31 +103,10 @@ class TrialData:
     def summary(self) -> dict[str, float]:
         """Descriptive statistics used by validation checks and reports.
 
-        Misuse is following the aid when it is wrong; disuse is rejecting it when
-        it is right (Parasuraman & Riley, 1997). With binary responses these are
-        ``1 - accuracy_aid_incorrect`` and ``1 - accuracy_aid_correct``. The
-        ``unaided`` entries are the manual baseline. Statistics conditioned on
-        trials that never occurred (e.g. misuse with a perfect aid) are NaN.
+        See :func:`summary_stats` for definitions.
         """
-        aided = self.aided
-        aid_right = self.aid_correct
-        aid_wrong = aided & ~aid_right
-        unaided = ~aided
-        correct = self.correct
-        return {
-            "n_trials": float(self.n_trials),
-            "n_aided": float(aided.sum()),
-            "aid_reliability": _masked_mean(aid_right, aided),
-            "accuracy": float(correct.mean()),
-            "accuracy_unaided": _masked_mean(correct, unaided),
-            "accuracy_aid_correct": _masked_mean(correct, aid_right),
-            "accuracy_aid_incorrect": _masked_mean(correct, aid_wrong),
-            "mean_rt_correct_unaided": _masked_mean(self.rt, correct & unaided),
-            "mean_rt_correct_aid_correct": _masked_mean(self.rt, correct & aid_right),
-            "mean_rt_correct_aid_incorrect": _masked_mean(self.rt, correct & aid_wrong),
-            "misuse_rate": _masked_mean(self.followed_advice, aid_wrong),
-            "disuse_rate": _masked_mean(~self.followed_advice, aid_right),
-        }
+        stats = summary_stats(self.stimulus, self.advice, self.choice, self.rt)
+        return {name: float(value) for name, value in stats.items()}
 
     @classmethod
     def from_dataframe(
@@ -209,5 +188,43 @@ def _coded(values, name: str, allowed: tuple[int, ...]) -> np.ndarray:
     return arr.astype(np.int8)
 
 
-def _masked_mean(values: np.ndarray, mask: np.ndarray) -> float:
-    return float(values[mask].mean()) if mask.any() else float("nan")
+def summary_stats(
+    stimulus: np.ndarray, advice: np.ndarray, choice: np.ndarray, rt: np.ndarray
+) -> dict[str, np.ndarray]:
+    """Descriptive statistics over the last axis, for one operator or a batch of simulations.
+
+    Arrays have shape ``(..., n_trials)`` and each statistic has shape ``(...)``.
+    Misuse is following the aid when it is wrong; disuse is rejecting it when it
+    is right (Parasuraman & Riley, 1997). With binary responses these are
+    ``1 - accuracy_aid_incorrect`` and ``1 - accuracy_aid_correct``. The
+    ``unaided`` entries are the manual baseline. Statistics conditioned on trials
+    that never occurred (e.g. misuse with a perfect aid) are NaN.
+    """
+    aided = advice != NO_ADVICE
+    aid_right = advice == stimulus
+    aid_wrong = aided & ~aid_right
+    unaided = ~aided
+    correct = choice == stimulus
+    followed = choice == advice
+    return {
+        "n_trials": np.full(aided.shape[:-1], aided.shape[-1], dtype=np.float64),
+        "n_aided": aided.sum(axis=-1).astype(np.float64),
+        "aid_reliability": _masked_mean(aid_right, aided),
+        "accuracy": correct.mean(axis=-1),
+        "accuracy_unaided": _masked_mean(correct, unaided),
+        "accuracy_aid_correct": _masked_mean(correct, aid_right),
+        "accuracy_aid_incorrect": _masked_mean(correct, aid_wrong),
+        "mean_rt_correct_unaided": _masked_mean(rt, correct & unaided),
+        "mean_rt_correct_aid_correct": _masked_mean(rt, correct & aid_right),
+        "mean_rt_correct_aid_incorrect": _masked_mean(rt, correct & aid_wrong),
+        "misuse_rate": _masked_mean(followed, aid_wrong),
+        "disuse_rate": _masked_mean(~followed, aid_right),
+    }
+
+
+def _masked_mean(values: np.ndarray, mask: np.ndarray) -> np.ndarray:
+    """Mean of ``values`` where ``mask`` is True, over the last axis; NaN where nothing is."""
+    count = mask.sum(axis=-1)
+    total = np.where(mask, values, 0).sum(axis=-1, dtype=np.float64)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        return np.where(count > 0, total / count, np.nan)

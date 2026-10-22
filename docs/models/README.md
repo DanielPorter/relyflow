@@ -80,17 +80,56 @@ narrowed so that training simulations stay plausible.
 TN(m, s) on [l, u] is a normal truncated to [l, u]. Published priors are from
 `R/3-model_specification*.R` in the OSF projects listed below.
 
-A preliminary prior predictive check (4,000 simulated operators × 400 trials)
-gave the following ranges:
+### Prior predictive check
 
-- Unaided accuracy: 0.55–0.96 (5th–95th percentile).
-- Median RT: 0.8–2.3 s.
-- Accuracy when the aid was wrong: 0.16–0.92.
+Each model simulated 5,000 operators drawn from its prior, on a design of 200
+unaided trials followed by 400 trials with an 85%-reliable aid. The table gives
+5th–95th percentiles across operators:
 
-These cover the 2023 data (unaided accuracy 0.85, median RT about 1.4 s, accuracy
-with a wrong 95% aid 0.50). The check will be repeated with the validated simulator
-in milestone 2. The RT range is calibrated to decisions taking roughly 0.5–3 s.
-Much faster or slower tasks will need a rescaled prior.
+| Statistic | Advisory | Reliance | Learning |
+| --- | --- | --- | --- |
+| Unaided accuracy | 0.55–0.96 | 0.55–0.96 | 0.55–0.96 |
+| Accuracy, aid right | 0.63–0.99 | 0.70–1.00 | 0.66–0.99 |
+| Accuracy, aid wrong | 0.35–0.93 | 0.18–0.88 | 0.32–0.92 |
+| Misuse rate | 0.07–0.65 | 0.12–0.82 | 0.08–0.68 |
+| Median RT (s) | 0.83–2.41 | 0.77–2.11 | 0.80–2.18 |
+
+These intervals cover the 2023 data: unaided accuracy 0.85, median RT about 1.4 s,
+and misuse of 0.22 with the 75% aid and 0.50 with the 95% aid.
+`tests/test_simulators.py` checks this coverage.
+
+**Time scale.** The priors are calibrated to decisions with median RTs of roughly
+0.8–2.4 s. Rather than widening them, much faster or slower tasks will be handled
+by expressing RTs in units of a task-specific time scale. This is applied when
+fitting (milestone 6) and simulating operators (milestone 7). The models
+themselves are unit-free: 1 unit = 1 s by default.
+
+**Long RT tails.** Rates are truncated at zero, so near-zero rates occur and each
+accumulator's finishing time has a power-law tail, P(T > t) ∝ 1/t. Race RTs
+therefore have finite means but infinite variance, and 0.5–0.8% of prior-predictive
+trials exceed 10 s, with a few over 100 s. Real tasks impose deadlines (7–8 s in
+the source studies) and drop non-responses. Two consequences:
+
+- Validation compares medians and quantiles, not means.
+- Milestone 3 must handle the tail when building training data (e.g. censoring at
+  a deadline, or a log-RT transform).
+
+## Simulators and likelihood
+
+Every model simulates with `model.simulate(params, stimulus, advice, rng)` and
+scores data with `model.log_likelihood(params, stimulus, advice, choice, rt)`.
+Both are vectorized over parameter sets. The likelihood is exact for all three
+models: the learning model's beliefs depend only on the aid's observed accuracy,
+not on the operator's responses, so they are deterministic given the design.
+
+The sampler draws truncated-normal rates by inversion in log space, which stays
+accurate 60 or more SDs into the tail. It is checked against the analytic density
+(Brown & Heathcote, 2008, normalized for truncation) by chi-square goodness of fit
+on 100,000 trials in four regimes, including negative mean rates. The tests catch
+planted bugs as small as a 10% error in the rate SD.
+
+Throughput is about 6 million trials per second on one CPU core for every model
+(`benchmarks/simulators.py`; Apple Silicon, NumPy 2.5).
 
 ## Source datasets
 
