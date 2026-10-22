@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+
+# Environments
+.venv/
+venv/
+.env
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Training outputs and large local data (pretrained networks we ship go in src/)
+checkpoints/
+runs/
+outputs/
+data/raw/
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/

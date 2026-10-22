@@ -1,0 +1,25 @@
+# relyflow
+
+Python package for amortized Bayesian inference (BayesFlow 2 / Keras 3) on cognitive
+models of human reliance on automated decision aids. The nine-milestone plan is in
+ROADMAP.md; check it to see what stage the project is at.
+
+## Commands
+
+- Environment: `uv venv && uv pip install -e ".[dev,jax]"` (Python 3.12–3.13)
+- Tests: `.venv/bin/pytest` (fast); `.venv/bin/pytest -m slow` (training)
+- Lint/format: `.venv/bin/ruff check . && .venv/bin/ruff format .`
+
+## Layout
+
+- `src/relyflow/data.py`: `TrialData`, the per-operator trial container (stimulus, advice, choice, rt)
+- `src/relyflow/models/`: `AutomationModel` interface, priors and simulators
+- `src/relyflow/{inference,diagnostics,comparison,synthetic,reports}/`: one subpackage per roadmap milestone
+
+## Rules
+
+- Never import bayesflow/keras/jax/torch from `relyflow/__init__.py`, `data.py` or `models/`.
+  `tests/test_package.py` enforces this.
+- Simulators take an `np.random.Generator`, are vectorized over parameter sets, and come
+  with qualitative-pattern tests.
+- Do not invent model equations or citations. Every model spec cites its source paper.
