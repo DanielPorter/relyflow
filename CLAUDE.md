@@ -13,7 +13,9 @@ ROADMAP.md; check it to see what stage the project is at.
 ## Layout
 
 - `src/relyflow/data.py`: `TrialData`, the per-operator trial container (stimulus, advice, choice, rt)
-- `src/relyflow/models/`: `AutomationModel` interface, priors and simulators
+- `src/relyflow/models/`: `AutomationModel`/`Parameter` interface (`base.py`), static
+  advisory/reliance LBA (`accumulator.py`), delta-rule learning extension (`learning.py`)
+- `docs/models/`: model specs with sources; keep them in sync with the priors in code
 - `src/relyflow/{inference,diagnostics,comparison,synthetic,reports}/`: one subpackage per roadmap milestone
 
 ## Rules
@@ -22,4 +24,5 @@ ROADMAP.md; check it to see what stage the project is at.
   `tests/test_package.py` enforces this.
 - Simulators take an `np.random.Generator`, are vectorized over parameter sets, and come
   with qualitative-pattern tests.
-- Do not invent model equations or citations. Every model spec cites its source paper.
+- Do not invent model equations or citations. Every model spec cites its source paper,
+  and anything relyflow adds beyond the papers (e.g. the learning coupling) is labelled.

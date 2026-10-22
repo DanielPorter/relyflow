@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from relyflow import TrialData, split_operators
+from relyflow import NO_ADVICE, TrialData, split_operators
 
 # Eight hand-checked trials. The aid is wrong on trials 3 and 7.
 # Trial 2 and 6 reject correct advice (disuse); trial 3 follows wrong advice (misuse).
@@ -47,6 +47,32 @@ def test_summary_is_nan_for_conditions_that_never_occur():
     assert s["disuse_rate"] == 0.0
 
 
+def test_unaided_trials_form_the_manual_baseline():
+    nan = float("nan")
+    data = TrialData(
+        stimulus=[1, 0, 1, 0, 1, 1, 0, 0],
+        advice=[nan, None, NO_ADVICE, nan, 1, 0, 0, 1],
+        choice=[1, 0, 0, 0, 1, 0, 0, 1],
+        rt=[1.0, 1.2, 1.4, 1.6, 0.5, 0.6, 0.7, 0.8],
+    )
+    np.testing.assert_array_equal(data.aided, [0, 0, 0, 0, 1, 1, 1, 1])
+    assert not (data.aid_correct[:4].any() or data.followed_advice[:4].any())
+    s = data.summary()
+    assert s["n_aided"] == 4
+    assert s["aid_reliability"] == pytest.approx(0.5)
+    assert s["accuracy_unaided"] == pytest.approx(0.75)
+    assert s["mean_rt_correct_unaided"] == pytest.approx((1.0 + 1.2 + 1.6) / 3)
+    assert s["misuse_rate"] == 1.0
+    assert s["disuse_rate"] == 0.0
+
+
+def test_unaided_trials_survive_a_dataframe_round_trip():
+    data = TrialData(stimulus=[0, 1, 1], advice=[NO_ADVICE, 1, 0], choice=[0, 1, 1], rt=[1, 1, 1])
+    df = data.to_dataframe()
+    assert df["advice"].isna().tolist() == [True, False, False]
+    np.testing.assert_array_equal(TrialData.from_dataframe(df).advice, data.advice)
+
+
 def test_arrays_are_read_only_copies():
     rt = np.array(RT)
     data = TrialData(stimulus=STIMULUS, advice=ADVICE, choice=CHOICE, rt=rt)
@@ -58,7 +84,8 @@ def test_arrays_are_read_only_copies():
 @pytest.mark.parametrize(
     ("override", "message"),
     [
-        ({"choice": [0, 1, 2, 0, 0, 0, 0, 0]}, "only 0 and 1"),
+        ({"choice": [0, 1, 2, 0, 0, 0, 0, 0]}, "only 0, 1"),
+        ({"advice": [1, 1, 1, 0, 0, 0, 0, 2]}, "only -1, 0, 1"),
         ({"advice": [[1, 1, 1, 0, 0, 0, 0, 1]]}, "1-D"),
         ({"rt": RT[:-1]}, "same length"),
         ({"rt": [0.5, -0.1, 0.7, 0.8, 0.5, 0.6, 0.7, 0.9]}, "positive and finite"),

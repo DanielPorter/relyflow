@@ -7,7 +7,8 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-_BINARY_FIELDS = ("stimulus", "advice", "choice")
+NO_ADVICE = -1
+"""Value of ``TrialData.advice`` on unaided (manual) trials."""
 
 
 @dataclass(frozen=True, eq=False)
@@ -18,6 +19,10 @@ class TrialData:
     "no conflict" / "conflict"). Trial order matters: reliability-learning models
     read the sequence trial by trial, so rows must not be shuffled.
 
+    Unaided (manual) trials have ``advice == NO_ADVICE``. The accumulator models
+    need some unaided trials as a baseline: without them, excitation and
+    inhibition cannot be told apart (see ``docs/models/static.md``).
+
     Whether the aid was correct is not stored separately; it is derived as
     ``advice == stimulus``.
 
@@ -26,7 +31,8 @@ class TrialData:
     stimulus
         True state of the world on each trial (0 or 1).
     advice
-        The aid's recommendation on each trial (0 or 1).
+        The aid's recommendation on each trial (0 or 1), or ``NO_ADVICE`` (-1)
+        on unaided trials. NaN and None are also read as unaided.
     choice
         The operator's response on each trial (0 or 1).
     rt
@@ -43,13 +49,12 @@ class TrialData:
 
     def __post_init__(self) -> None:
         arrays: dict[str, np.ndarray] = {}
-        for name in _BINARY_FIELDS:
-            arr = np.asarray(getattr(self, name))
-            if arr.ndim != 1:
-                raise ValueError(f"{name} must be 1-D, got shape {arr.shape}")
-            if not np.isin(arr, (0, 1)).all():
-                raise ValueError(f"{name} must contain only 0 and 1")
-            arrays[name] = arr.astype(np.int8)
+        for name in ("stimulus", "choice"):
+            arrays[name] = _coded(getattr(self, name), name, allowed=(0, 1))
+        advice = np.asarray(self.advice, dtype=np.float64)
+        arrays["advice"] = _coded(
+            np.where(np.isnan(advice), NO_ADVICE, advice), "advice", allowed=(NO_ADVICE, 0, 1)
+        )
 
         rt = np.array(self.rt, dtype=np.float64)
         if rt.ndim != 1:
@@ -76,8 +81,13 @@ class TrialData:
         return len(self.rt)
 
     @property
+    def aided(self) -> np.ndarray:
+        """True on trials where the aid gave advice."""
+        return self.advice != NO_ADVICE
+
+    @property
     def aid_correct(self) -> np.ndarray:
-        """True on trials where the aid's advice matched the stimulus."""
+        """True on aided trials where the advice matched the stimulus."""
         return self.advice == self.stimulus
 
     @property
@@ -87,7 +97,7 @@ class TrialData:
 
     @property
     def followed_advice(self) -> np.ndarray:
-        """True on trials where the operator's choice matched the aid's advice."""
+        """True on aided trials where the operator's choice matched the advice."""
         return self.choice == self.advice
 
     def summary(self) -> dict[str, float]:
@@ -95,19 +105,24 @@ class TrialData:
 
         Misuse is following the aid when it is wrong; disuse is rejecting it when
         it is right (Parasuraman & Riley, 1997). With binary responses these are
-        ``1 - accuracy_aid_incorrect`` and ``1 - accuracy_aid_correct``. Rates
-        conditioned on trials that never occurred (e.g. misuse with a perfect
-        aid) are NaN.
+        ``1 - accuracy_aid_incorrect`` and ``1 - accuracy_aid_correct``. The
+        ``unaided`` entries are the manual baseline. Statistics conditioned on
+        trials that never occurred (e.g. misuse with a perfect aid) are NaN.
         """
+        aided = self.aided
         aid_right = self.aid_correct
-        aid_wrong = ~aid_right
+        aid_wrong = aided & ~aid_right
+        unaided = ~aided
         correct = self.correct
         return {
             "n_trials": float(self.n_trials),
-            "aid_reliability": float(aid_right.mean()),
+            "n_aided": float(aided.sum()),
+            "aid_reliability": _masked_mean(aid_right, aided),
             "accuracy": float(correct.mean()),
+            "accuracy_unaided": _masked_mean(correct, unaided),
             "accuracy_aid_correct": _masked_mean(correct, aid_right),
             "accuracy_aid_incorrect": _masked_mean(correct, aid_wrong),
+            "mean_rt_correct_unaided": _masked_mean(self.rt, correct & unaided),
             "mean_rt_correct_aid_correct": _masked_mean(self.rt, correct & aid_right),
             "mean_rt_correct_aid_incorrect": _masked_mean(self.rt, correct & aid_wrong),
             "misuse_rate": _masked_mean(self.followed_advice, aid_wrong),
@@ -128,27 +143,29 @@ class TrialData:
         """Build from a DataFrame with one row per trial, already in presentation order.
 
         Keyword arguments name the columns to read when they differ from the defaults.
+        Missing values in the advice column mark unaided trials.
         """
         missing = [col for col in (stimulus, advice, choice, rt) if col not in df.columns]
         if missing:
             raise KeyError(f"DataFrame is missing columns: {missing}")
         return cls(
             stimulus=df[stimulus].to_numpy(),
-            advice=df[advice].to_numpy(),
+            advice=df[advice].to_numpy(dtype=np.float64, na_value=np.nan),
             choice=df[choice].to_numpy(),
             rt=df[rt].to_numpy(),
             operator_id=operator_id,
         )
 
     def to_dataframe(self) -> pd.DataFrame:
-        """One row per trial, with the derived correctness columns included."""
+        """One row per trial, with derived columns included. Unaided advice is <NA>."""
         df = pd.DataFrame(
             {
                 "trial": np.arange(self.n_trials),
                 "stimulus": self.stimulus,
-                "advice": self.advice,
+                "advice": pd.Series(self.advice, dtype="Int8").mask(~self.aided),
                 "choice": self.choice,
                 "rt": self.rt,
+                "aided": self.aided,
                 "aid_correct": self.aid_correct,
                 "correct": self.correct,
             }
@@ -181,6 +198,15 @@ def split_operators(
             rows, operator_id=str(operator), **columns
         )
     return operators
+
+
+def _coded(values, name: str, allowed: tuple[int, ...]) -> np.ndarray:
+    arr = np.asarray(values)
+    if arr.ndim != 1:
+        raise ValueError(f"{name} must be 1-D, got shape {arr.shape}")
+    if not np.isin(arr, allowed).all():
+        raise ValueError(f"{name} must contain only {', '.join(map(str, allowed))}")
+    return arr.astype(np.int8)
 
 
 def _masked_mean(values: np.ndarray, mask: np.ndarray) -> float:

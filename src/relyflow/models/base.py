@@ -1,16 +1,39 @@
-"""Interface every automation-use model implements.
-
-Provisional: the parameter sets and priors are fixed in roadmap milestone 1,
-and this contract may change with them.
-"""
+"""Interface every automation-use model implements."""
 
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
-from typing import ClassVar
+from dataclasses import dataclass
+from typing import Any, ClassVar
 
 import numpy as np
+from scipy import stats
+
+
+@dataclass(frozen=True)
+class Parameter:
+    """A model parameter: its name, what it means, and its prior.
+
+    ``prior`` is a frozen ``scipy.stats`` distribution.
+    """
+
+    name: str
+    description: str
+    prior: Any
+
+    def sample(self, n: int, rng: np.random.Generator) -> np.ndarray:
+        return np.asarray(self.prior.rvs(size=n, random_state=rng), dtype=np.float64)
+
+    @property
+    def support(self) -> tuple[float, float]:
+        lower, upper = self.prior.support()
+        return float(lower), float(upper)
+
+
+def truncnorm(mean: float, sd: float, lower: float = -np.inf, upper: float = np.inf):
+    """Normal(mean, sd) truncated to [lower, upper], as a frozen scipy distribution."""
+    return stats.truncnorm((lower - mean) / sd, (upper - mean) / sd, loc=mean, scale=sd)
 
 
 class AutomationModel(ABC):
@@ -22,11 +45,15 @@ class AutomationModel(ABC):
     """
 
     name: ClassVar[str]
-    param_names: ClassVar[tuple[str, ...]]
+    parameters: ClassVar[tuple[Parameter, ...]]
 
-    @abstractmethod
+    @property
+    def param_names(self) -> tuple[str, ...]:
+        return tuple(p.name for p in self.parameters)
+
     def sample_prior(self, n: int, rng: np.random.Generator) -> dict[str, np.ndarray]:
-        """Draw ``n`` parameter sets. Each value has shape ``(n,)``."""
+        """Draw ``n`` parameter sets from the independent priors; each value has shape ``(n,)``."""
+        return {p.name: p.sample(n, rng) for p in self.parameters}
 
     @abstractmethod
     def simulate(
@@ -43,8 +70,9 @@ class AutomationModel(ABC):
         params
             Parameter arrays of shape ``(n_sims,)``, keyed by ``param_names``.
         stimulus, advice
-            Arrays of shape ``(n_sims, n_trials)`` in presentation order. Order
-            matters for models that learn the aid's reliability.
+            Arrays of shape ``(n_sims, n_trials)`` in presentation order, with
+            ``advice == NO_ADVICE`` on unaided trials. Order matters for models
+            that learn the aid's reliability.
         rng
             Source of randomness; simulators must not use global RNG state.
 

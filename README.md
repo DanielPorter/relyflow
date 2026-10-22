@@ -2,8 +2,9 @@
 
 **Amortized Bayesian inference for cognitive models of how people use automated decision aids.**
 
-> **Status: pre-alpha.** Only the trial-data layer works so far. Everything else below
-> is the target design. Progress is tracked in [ROADMAP.md](ROADMAP.md).
+> **Status: pre-alpha.** The trial-data layer and the model specifications
+> ([docs/models/](docs/models/)) are done. Everything else below is the target design.
+> Progress is tracked in [ROADMAP.md](ROADMAP.md).
 
 relyflow fits evidence-accumulation models of automation use to one operator's
 trial-by-trial data in seconds. It does this with neural networks trained once on
@@ -21,7 +22,7 @@ person. It is built to answer three questions:
 
 | Area | What it provides |
 | --- | --- |
-| Models | A static advisory/reliance accumulator and a reliability-learning (delta-rule) extension, with documented parameters and priors |
+| Models | Static advisory and reliance accumulator models (Strickland et al., 2021, 2023) and a reliability-learning (delta-rule) extension, with documented parameters and priors |
 | Simulators | Vectorized simulators, validated against known qualitative patterns |
 | Inference | Pretrained amortized posterior networks: a set encoder for static models, a sequence encoder for learning models |
 | Validation | Parameter recovery, simulation-based calibration, posterior predictive checks and an MCMC benchmark |
@@ -36,11 +37,12 @@ Each operator contributes one row per trial, **in presentation order**:
 | Column | Meaning |
 | --- | --- |
 | `stimulus` | True state of the world (0/1) |
-| `advice` | The aid's recommendation (0/1) |
+| `advice` | The aid's recommendation (0/1), or empty on unaided trials |
 | `choice` | The operator's response (0/1) |
 | `rt` | Response time in seconds |
 
-Whether the aid was correct is derived as `advice == stimulus`.
+Whether the aid was correct is derived as `advice == stimulus`. Include some
+unaided (manual) trials: the models measure the aid's influence relative to them.
 
 ```python
 import pandas as pd

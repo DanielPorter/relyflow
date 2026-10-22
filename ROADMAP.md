@@ -4,32 +4,38 @@ relyflow is built in nine milestones. Each one lists what it delivers and what c
 as done. Later milestones depend on earlier ones, especially on milestone 2: every
 network, diagnostic and report inherits any simulator bug.
 
-## 1. Model specification
+## 1. Model specification ✅
 
-Choose two or three published automation-use models and pin each one down precisely.
+Specs with sources, equations, parameters and priors are in [docs/models/](docs/models/).
 
-- [ ] Static **advisory** accumulator: the aid's advice changes the rates of the evidence
-      accumulators (excitation of the advised response, inhibition of the other).
-- [ ] Static **reliance** variant: on some trials the operator adopts the aid's advice
-      instead of deciding independently. Needed for the advising-vs-reliance comparison
-      in milestone 5.
-- [ ] **Reliability-learning** extension: trust in the aid is updated trial by trial with
-      a delta rule (prediction error on aid correctness) and scales the advice effect.
-- [ ] For each model, a document in `docs/models/` giving source citations, equations,
-      the parameter table (name, meaning, support, prior), and the trial-level data it
-      needs.
-- [ ] Decide whether unaided (manual) trials are supported, since they help identify
-      baseline accumulation rates.
+- [x] Static **advisory** accumulator: the aid's advice inhibits the accumulator that
+      disagrees with it (Strickland et al., 2021).
+- [x] Static **reliance** variant: the advice also excites the agreeing accumulator,
+      giving the aid autonomy to trigger decisions (Strickland et al., 2023). Advisory
+      is reliance with excitation fixed at 0, which sets up milestone 5's comparison.
+- [x] **Reliability-learning** extension: delta-rule perceived reliability
+      (Strickland et al., 2024) scales the advice effects trial by trial. The learning
+      rule is published; its coupling to the accumulator is relyflow's own and is
+      documented as such.
+- [x] Parameter tables (meaning, support, prior) and trial-level data requirements.
+- [x] Unaided (manual) trials: **required**. Without them, excitation and inhibition
+      are not identifiable. `TrialData` marks them with `NO_ADVICE`.
 
-**Done when** each model has a written spec reviewed against its source paper and a
-matching `AutomationModel` subclass with priors (simulator still a stub).
+**Done:** `Advisory`, `Reliance` and `ReliabilityLearning` define priors and
+mean-rate and threshold mappings, tested against the papers' definitions. The
+race simulator is a stub until milestone 2.
 
 ## 2. Validated simulators
 
-- [ ] Vectorized NumPy simulators, one call for many operators × many trials.
+- [ ] Vectorized NumPy LBA race simulator, one call for many operators × many trials,
+      built on the mean-rate and threshold mappings from milestone 1.
+- [ ] Prior predictive checks with the validated simulator (milestone 1 ran only a
+      preliminary check), including whether a time-scale option is needed for tasks
+      much faster or slower than 0.5–3 s.
 - [ ] Qualitative-pattern tests: higher accuracy when the aid is right; slower correct
-      responses when the aid is wrong; misuse rising with reliance; learned trust
-      tracking the aid's running reliability and dropping after aid failures.
+      responses when the aid is wrong; misuse rising with excitation; learned trust
+      tracking the aid's running reliability and dropping after aid failures. Target
+      values are in [docs/models/static.md](docs/models/static.md).
 - [ ] Where a likelihood exists, check simulated choice and RT distributions against it.
 - [ ] Throughput benchmark, so that training-set size is not limited by simulation.
 
@@ -89,9 +95,12 @@ check catches deliberately misspecified data at a documented false-alarm rate.
 
 ## 8. Real-data demonstration
 
-- [ ] Pick a dataset: a publicly posted automation-use dataset (check its license and
-      that it has trial-level choices, RTs, advice and aid correctness), or run a small
-      online study.
+- [ ] Pick a dataset. Candidates found in milestone 1 (licenses still to check): the
+      Strickland et al. (2021) data (<https://osf.io/28g3j/>; 24 × 2,400 trials, 90% aid
+      vs. manual) and the Strickland et al. (2023) data (<https://osf.io/q3b2r/>;
+      24 × about 4,680 trials, 95% and 75% aids vs. manual, with trust ratings). Both
+      have trial order, choices, RTs, aid correctness and unaided baselines.
+- [ ] Test the learning model's coupling, which is not yet validated on data.
 - [ ] Run the full pipeline: OOD check, model comparison, fits, reports, PPCs.
 - [ ] Show the results are sensible and interpretable, and compare with published
       findings where possible.
