@@ -10,13 +10,23 @@ judgments of "the probability that the automation's next classification will be
 correct" from 240 participants across three experiments. The delta rule fitted
 well. A two-kernel delta rule fitted best in seven of eight conditions.
 
-**Coupling the rule to the accumulator model is not published.** Strickland et al.
-(2024) propose it as a direction: learning could act as a "front end" to the
-evidence accumulation model, with higher learned reliability increasing
-accumulation in favour of agreeing with the aid. As of October 2026 we found no
-published fit of such a combined model. The coupling below is relyflow's own
-formalization. It is tested on data in milestone 8, and its results should be
-described as an extension of the published models.
+**Coupling the rule to the accumulator model is recent and not yet in a paper.**
+Strickland et al. (2024) proposed it as a direction: learning could act as a
+"front end" to the evidence accumulation model, with higher learned reliability
+increasing accumulation in favour of agreeing with the aid.
+
+A closely related model has since been presented: the automation-reliability-
+learning evidence accumulation model (ARL-EAM) of Lin, Loft, Heathcote, Miletić
+and Strickland (2026), in a talk at MathPsych/ICCM on July 18, 2026. In it, a
+delta rule updates perceived reliability on every trial and adjusts the advisory
+(inhibition) and reliance (excitation) parameters. It was fitted to 96
+participants in an air traffic control task in which the aid's reliability fell
+from 90% to 70% or 50% and then recovered. Only the abstract is available as of
+October 2026, so its exact coupling cannot yet be compared with the one below.
+
+The coupling below is therefore relyflow's own formalization. It is tested on data
+in milestone 8. When the ARL-EAM paper appears, its coupling should be compared
+with this one and, if it differs, offered as a variant.
 
 ## Specification
 

@@ -3,8 +3,10 @@
 The operator's perceived reliability of the aid is updated after every aided
 trial with the delta rule of Strickland et al. (2024, Eq. 2), and scales the
 advice effects of the accumulator model. Coupling the learning rule to the
-accumulator was proposed by Strickland et al. (2024) but not fitted there; the
-coupling used here is relyflow's own and is specified in ``docs/models/learning.md``.
+accumulator was proposed by Strickland et al. (2024) but not fitted there. A
+related model was presented by Lin et al. (2026, conference talk, abstract only);
+the coupling used here is relyflow's own and is specified in
+``docs/models/learning.md``.
 """
 
 from __future__ import annotations

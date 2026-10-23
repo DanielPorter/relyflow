@@ -8,7 +8,7 @@ human-automation teaming developed by Strickland, Loft, Heathcote and colleagues
 | --- | --- | --- | --- |
 | Advisory | `"advisory"` | Inhibits the accumulator that disagrees with the advice | Strickland et al. (2021) |
 | Reliance | `"reliance"` | Inhibition, plus excitation of the accumulator that agrees with the advice | Strickland et al. (2023) |
-| Reliability learning | `"learning"` | As reliance, scaled trial by trial by delta-rule learned reliability | Learning rule: Strickland et al. (2024). Coupling to the accumulator: relyflow (see [learning.md](learning.md)) |
+| Reliability learning | `"learning"` | As reliance, scaled trial by trial by delta-rule learned reliability | Learning rule: Strickland et al. (2024). Coupling to the accumulator: relyflow; a related model was presented by Lin et al. (2026) (see [learning.md](learning.md)) |
 
 - [static.md](static.md) specifies the advisory and reliance models.
 - [learning.md](learning.md) specifies the reliability-learning extension.
@@ -150,6 +150,9 @@ unaided baselines, and both are candidates for the real-data demonstration
 - Heathcote, A., Lin, Y.-S., Reynolds, A., Strickland, L., Gretton, M., & Matzke, D.
   (2019). Dynamic models of choice. *Behavior Research Methods, 51*(2), 961–985.
   https://doi.org/10.3758/s13428-018-1067-y
+- Lin, W., Loft, S., Heathcote, A., Miletić, S., & Strickland, L. (2026, July 18). An
+  evidence accumulation model of adaptive automation use [Conference presentation].
+  MathPsych/ICCM 2026. https://mathpsych.org/session/514
 - Parasuraman, R., & Riley, V. (1997). Humans and automation: Use, misuse, disuse,
   abuse. *Human Factors, 39*(2), 230–253. https://doi.org/10.1518/001872097778543886
 - Strickland, L., Heathcote, A., Bowden, V. K., Boag, R. J., Wilson, M. K., Khan, S.,
