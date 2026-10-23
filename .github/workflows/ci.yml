@@ -36,5 +36,5 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
           cache-dependency-path: pyproject.toml
-      - run: pip install -e ".[dev,jax]"
+      - run: pip install -e ".[dev,jax,mcmc]"
       - run: pytest --cov --cov-report=term-missing

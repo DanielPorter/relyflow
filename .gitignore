@@ -32,3 +32,9 @@ data/raw/
 .DS_Store
 .idea/
 .vscode/
+
+# Local presentation decks (not part of the package)
+presentations/
+
+# Validation run logs (progress output)
+docs/validation/*.log

@@ -1,0 +1,244 @@
+{
+  "model": "advisory",
+  "network": "checkpoints/advisory",
+  "refine": "importance",
+  "n_sbc": 300,
+  "n_draws": 1000,
+  "recovery": [
+    {
+      "parameter": "v_match_0",
+      "r2": 0.8995408829542093,
+      "nrmse": 0.057628674138652025,
+      "contraction": 0.9100467910298294,
+      "coverage_50": 0.5,
+      "coverage_90": 0.8766666666666667,
+      "coverage_95": 0.93,
+      "coverage_90_ok": true
+    },
+    {
+      "parameter": "v_match_1",
+      "r2": 0.9007071131524533,
+      "nrmse": 0.060169558914010206,
+      "contraction": 0.9020624612467294,
+      "coverage_50": 0.54,
+      "coverage_90": 0.8933333333333333,
+      "coverage_95": 0.9433333333333334,
+      "coverage_90_ok": true
+    },
+    {
+      "parameter": "v_mismatch_0",
+      "r2": 0.8696310731372109,
+      "nrmse": 0.05646292309743748,
+      "contraction": 0.8603025550924885,
+      "coverage_50": 0.5566666666666666,
+      "coverage_90": 0.8933333333333333,
+      "coverage_95": 0.9433333333333334,
+      "coverage_90_ok": true
+    },
+    {
+      "parameter": "v_mismatch_1",
+      "r2": 0.8617067312402462,
+      "nrmse": 0.06439662805053215,
+      "contraction": 0.8590440404250106,
+      "coverage_50": 0.4766666666666667,
+      "coverage_90": 0.8733333333333333,
+      "coverage_95": 0.94,
+      "coverage_90_ok": true
+    },
+    {
+      "parameter": "sv_match",
+      "r2": 0.9086670193574323,
+      "nrmse": 0.06080360509503538,
+      "contraction": 0.9139614829777524,
+      "coverage_50": 0.5166666666666667,
+      "coverage_90": 0.9,
+      "coverage_95": 0.93,
+      "coverage_90_ok": true
+    },
+    {
+      "parameter": "A",
+      "r2": 0.7650989361731655,
+      "nrmse": 0.09985495189648419,
+      "contraction": 0.7777435216840516,
+      "coverage_50": 0.4633333333333333,
+      "coverage_90": 0.86,
+      "coverage_95": 0.93,
+      "coverage_90_ok": true
+    },
+    {
+      "parameter": "B_0",
+      "r2": 0.8605808152316139,
+      "nrmse": 0.06556734948804535,
+      "contraction": 0.8658397835141086,
+      "coverage_50": 0.48333333333333334,
+      "coverage_90": 0.89,
+      "coverage_95": 0.94,
+      "coverage_90_ok": true
+    },
+    {
+      "parameter": "B_1",
+      "r2": 0.8810040613474638,
+      "nrmse": 0.06862569148587541,
+      "contraction": 0.8599876270117099,
+      "coverage_50": 0.52,
+      "coverage_90": 0.9266666666666666,
+      "coverage_95": 0.9566666666666667,
+      "coverage_90_ok": true
+    },
+    {
+      "parameter": "B_aided_scale",
+      "r2": 0.9185096469798179,
+      "nrmse": 0.04322100439510562,
+      "contraction": 0.9207317837906626,
+      "coverage_50": 0.4766666666666667,
+      "coverage_90": 0.9033333333333333,
+      "coverage_95": 0.95,
+      "coverage_90_ok": true
+    },
+    {
+      "parameter": "t0",
+      "r2": 0.7889093026330143,
+      "nrmse": 0.09471974780511236,
+      "contraction": 0.7642331846019917,
+      "coverage_50": 0.54,
+      "coverage_90": 0.9133333333333333,
+      "coverage_95": 0.9466666666666667,
+      "coverage_90_ok": true
+    },
+    {
+      "parameter": "inhibition",
+      "r2": 0.9088190593447236,
+      "nrmse": 0.06930294176055574,
+      "contraction": 0.9308664337746577,
+      "coverage_50": 0.4666666666666667,
+      "coverage_90": 0.86,
+      "coverage_95": 0.9366666666666666,
+      "coverage_90_ok": true
+    }
+  ],
+  "sbc": [
+    {
+      "parameter": "v_match_0",
+      "log_gamma": 5.8363969047922915,
+      "passed": true,
+      "mean_rank": 0.5016499999999997
+    },
+    {
+      "parameter": "v_match_1",
+      "log_gamma": 6.017022083089352,
+      "passed": true,
+      "mean_rank": 0.5122366666666661
+    },
+    {
+      "parameter": "v_mismatch_0",
+      "log_gamma": 5.995566107769572,
+      "passed": true,
+      "mean_rank": 0.5014166666666667
+    },
+    {
+      "parameter": "v_mismatch_1",
+      "log_gamma": 0.8853776109945093,
+      "passed": true,
+      "mean_rank": 0.5047999999999997
+    },
+    {
+      "parameter": "sv_match",
+      "log_gamma": 4.531699225417822,
+      "passed": true,
+      "mean_rank": 0.49241000000000035
+    },
+    {
+      "parameter": "A",
+      "log_gamma": 2.1735361931717656,
+      "passed": true,
+      "mean_rank": 0.5263499999999999
+    },
+    {
+      "parameter": "B_0",
+      "log_gamma": 5.95678726411003,
+      "passed": true,
+      "mean_rank": 0.49416000000000027
+    },
+    {
+      "parameter": "B_1",
+      "log_gamma": 4.122717119350467,
+      "passed": true,
+      "mean_rank": 0.49033666666666686
+    },
+    {
+      "parameter": "B_aided_scale",
+      "log_gamma": 5.57903452134149,
+      "passed": true,
+      "mean_rank": 0.499726666666667
+    },
+    {
+      "parameter": "t0",
+      "log_gamma": 4.815807776207564,
+      "passed": true,
+      "mean_rank": 0.5042566666666665
+    },
+    {
+      "parameter": "inhibition",
+      "log_gamma": 3.307826999657684,
+      "passed": true,
+      "mean_rank": 0.5009700000000002
+    }
+  ],
+  "ppc": [
+    {
+      "statistic": "accuracy_unaided",
+      "share_outside_95": 0.0
+    },
+    {
+      "statistic": "accuracy_aid_right",
+      "share_outside_95": 0.0
+    },
+    {
+      "statistic": "accuracy_aid_wrong",
+      "share_outside_95": 0.01
+    },
+    {
+      "statistic": "correct_rt_q10_unaided",
+      "share_outside_95": 0.0
+    },
+    {
+      "statistic": "correct_rt_q50_unaided",
+      "share_outside_95": 0.0
+    },
+    {
+      "statistic": "correct_rt_q90_unaided",
+      "share_outside_95": 0.005
+    },
+    {
+      "statistic": "correct_rt_q10_aid_right",
+      "share_outside_95": 0.01
+    },
+    {
+      "statistic": "correct_rt_q50_aid_right",
+      "share_outside_95": 0.0
+    },
+    {
+      "statistic": "correct_rt_q90_aid_right",
+      "share_outside_95": 0.015
+    },
+    {
+      "statistic": "correct_rt_q10_aid_wrong",
+      "share_outside_95": 0.015
+    },
+    {
+      "statistic": "correct_rt_q50_aid_wrong",
+      "share_outside_95": 0.025
+    },
+    {
+      "statistic": "correct_rt_q90_aid_wrong",
+      "share_outside_95": 0.035
+    }
+  ],
+  "ppc_share_outside_95": 0.009583333333333333,
+  "passed": {
+    "sbc": true,
+    "coverage_90": true,
+    "ppc": true
+  },
+  "seconds": 561.8
+}

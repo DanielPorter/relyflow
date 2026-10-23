@@ -61,7 +61,7 @@ def accumulator_pdf_cdf(
     Brown & Heathcote (2008), Eqs. 1-2, divided by ``Phi(v / s)`` for rates
     truncated at zero. Returns zeros for ``t <= 0``.
     """
-    t, v, s, b, A = np.broadcast_arrays(*map(np.asarray, (t, v, s, b, A)))
+    t, v, s, b, A = (np.array(x, dtype=np.float64) for x in np.broadcast_arrays(t, v, s, b, A))
     positive = t > 0
     ts = np.where(positive, t, 1.0) * s
     tv = np.where(positive, t, 1.0) * v
@@ -74,9 +74,38 @@ def accumulator_pdf_cdf(
         1.0 + (b - A - tv) / A * ndtr(z_lo) - (b - tv) / A * ndtr(z_hi) + ts / A * (phi_lo - phi_hi)
     )
     mass = ndtr(v / s)
-    pdf = np.where(positive, np.clip(pdf, 0.0, None) / mass, 0.0)
-    cdf = np.where(positive, np.clip(cdf / mass, 0.0, 1.0), 0.0)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        pdf = np.where(positive, np.clip(pdf, 0.0, None) / mass, 0.0)
+        cdf = np.where(positive, np.clip(cdf / mass, 0.0, 1.0), 0.0)
+
+    # Far in the truncation tail the closed form is a cancellation of O(1) terms
+    # divided by a vanishing Phi(v/s); use stable quadrature there instead.
+    tail = positive & (v / s < _TAIL_Z)
+    if tail.any():
+        pdf[tail], cdf[tail] = _tail_pdf_cdf(t[tail], v[tail], s[tail], b[tail], A[tail])
     return pdf, cdf
+
+
+_TAIL_Z = -5.0
+_GL_NODES, _GL_WEIGHTS = np.polynomial.legendre.leggauss(32)
+
+
+def _tail_pdf_cdf(t, v, s, b, A):
+    """Finishing-time density and CDF by quadrature over the start point, in log space.
+
+    Given start point x, the accumulator finishes by t when its rate exceeds
+    c = (b - x) / t, and the density of t is g(c) * c / t, where g is the
+    truncated-normal rate density. Both are averaged over x ~ U(0, A) with
+    Gauss-Legendre quadrature, using log-space normal tails throughout.
+    """
+    x = 0.5 * A[:, None] * (1.0 + _GL_NODES)  # (n, nodes)
+    c = (b[:, None] - x) / t[:, None]
+    z = (c - v[:, None]) / s[:, None]
+    log_mass = log_ndtr(v / s)[:, None]
+    log_g = -0.5 * z**2 - np.log(_SQRT_2PI * s[:, None]) - log_mass
+    pdf = 0.5 * np.sum(_GL_WEIGHTS * np.exp(log_g) * c / t[:, None], axis=1)
+    cdf = 0.5 * np.sum(_GL_WEIGHTS * np.exp(log_ndtr(-z) - log_mass), axis=1)
+    return pdf, np.clip(cdf, 0.0, 1.0)
 
 
 def race_density(

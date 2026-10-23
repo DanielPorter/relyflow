@@ -72,22 +72,26 @@ Details and results are in [docs/inference.md](docs/inference.md).
       `RELYFLOW_WEIGHTS_DIR` for local networks). Code done; the release follows
       the milestone 3 commit.
 
-## 4. Validation suite
+## 4. Validation suite ✅
 
-- [ ] Parameter recovery: posterior mean vs. truth, R², NRMSE, posterior contraction.
-- [ ] Simulation-based calibration: rank histograms and ECDF difference plots.
-- [ ] Posterior predictive checks on accuracy, RT quantiles, misuse and disuse.
-- [ ] Learning model: close the gap in `alpha` recovery (network R² 0.28 vs. 0.58
-      near-exact) by refining the network's (`alpha`, `r0`) draws with the exact
-      likelihood, and check `alpha`'s slight overconfidence (86% coverage of 90%
-      intervals).
-- [ ] MCMC benchmark: compare amortized and NUTS posteriors (means, SDs,
-      distributional distance) and wall-clock time. All three models have exact
-      likelihoods (`model.log_likelihood`), so the learning model can be
-      benchmarked too, not just the static ones.
+Results are in [docs/validation/](docs/validation/README.md). Run with
+`python -m relyflow.diagnostics validate <network> --out <dir> [--refine importance]`.
 
-**Done when** all diagnostics are produced by one command and pass for every model, and
-the benchmark results are recorded in the docs.
+- [x] Parameter recovery and coverage: R², NRMSE, contraction, 50/90/95% intervals.
+- [x] Simulation-based calibration: log-gamma rank-uniformity test (family-wise 5%)
+      and ECDF plots, on operators from the training design distribution.
+- [x] Posterior predictive checks on accuracy and correct-RT quantiles by trial type.
+- [x] MCMC benchmark against NUTS (`relyflow.mcmc`: NumPyro on a JAX twin of the
+      likelihood, tested equal to the NumPy one), run in parallel workers. Covers
+      all three models, since all have exact likelihoods.
+- [x] Exact-likelihood refinement (`relyflow.inference.refine`): importance
+      resampling (1–2 s per operator) and NUTS from network draws.
+
+**Outcome:** raw networks are calibrated to conservative, with posteriors 1.1–1.8×
+wider than NUTS (reliance fails SBC on two mismatch rates for this reason).
+Importance-refined posteriors pass every check for every model and match NUTS
+(mean error ≤ 0.07 SD, SD ratio 0.96–1.03), about 170× faster than NUTS. Along
+the way, the LBA density was made stable deep in the truncation tail.
 
 ## 5. Model comparison and misspecification
 

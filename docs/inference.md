@@ -169,6 +169,31 @@ same number of trials. Loading warns if the model's parameters or priors have
 changed since the network was trained, because such a network's posteriors belong
 to the old model.
 
+## Refining with the exact likelihood
+
+Every relyflow model has an exact likelihood, so an amortized posterior can be
+corrected after the fact (`relyflow.inference.refine`):
+
+```python
+from relyflow.inference.refine import importance_resample, nuts_refine
+
+refined = importance_resample(amortizer, trial_data)  # a few seconds
+refined.draws, refined.diagnostics  # {"ess": ..., "efficiency": ...}
+refined = nuts_refine(amortizer, trial_data)  # NUTS from network draws; ~1-2 min
+```
+
+- **Importance resampling** weights 8,000 network draws by exact posterior ÷
+  network density and resamples them. The network density is evaluated with one
+  pass of the summary network, which takes 3 s instead of 43 s for the learning
+  model. Low efficiency (ESS / proposals) means the network's posterior was far
+  from the exact one for these data. Median efficiency is about 20% for the
+  reliance network and about 5% for the learning network.
+- **NUTS refinement** (`mcmc` extra) starts NUTS chains at network draws and
+  reports R̂, ESS and divergences.
+
+How well each option agrees with full NUTS is measured in the validation suite
+([validation/](validation/README.md)).
+
 ## Pretrained networks
 
 Pretrained networks are published as assets of versioned GitHub releases
@@ -207,5 +232,6 @@ prior variance), and the share of 90% intervals containing the true value.
 - One operator's posterior (2,000 draws) takes 0.03 s for every model, and 500
   operators take under 3 s.
 
-Milestone 4 adds full simulation-based calibration, posterior predictive checks
-and the MCMC benchmark.
+Full simulation-based calibration, posterior predictive checks and the NUTS
+benchmark are in [validation/](validation/README.md). In short, the raw networks
+are calibrated to conservative, and importance-refined posteriors match NUTS.

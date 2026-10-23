@@ -169,7 +169,9 @@ class StaticAccumulator(AutomationModel):
         density = race_density(
             choice, rt, means, sds, bounds, params["A"][:, None], params["t0"][:, None]
         )
-        return np.log(np.maximum(density, np.finfo(np.float64).tiny)).sum(axis=-1)
+        tiny = np.finfo(np.float64).tiny
+        density = np.where(np.isfinite(density) & (density > tiny), density, tiny)
+        return np.log(density).sum(axis=-1)
 
 
 class Advisory(StaticAccumulator):

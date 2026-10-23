@@ -6,19 +6,19 @@ You need Python 3.12 or 3.13. With [uv](https://docs.astral.sh/uv/):
 
 ```bash
 uv venv
-uv pip install -e ".[dev,jax]"
+uv pip install -e ".[dev,jax,mcmc]"
 pre-commit install
 ```
 
-With plain pip, create a virtual environment and run `pip install -e ".[dev,jax]"`.
+With plain pip, create a virtual environment and run `pip install -e ".[dev,jax,mcmc]"`.
 Use the `torch` extra instead of `jax` if you prefer PyTorch, and set `KERAS_BACKEND`
 to match.
 
 ## Checks
 
 ```bash
-pytest                  # fast test suite
-pytest -m slow          # training and large simulation tests
+pytest                  # fast test suite (slow tests are skipped by default)
+pytest -m slow          # slow tests only: NUTS runs, larger simulations
 ruff check . && ruff format --check .
 ```
 

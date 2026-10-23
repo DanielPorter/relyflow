@@ -92,3 +92,31 @@ def test_truncated_normal_rates_are_positive_and_correctly_distributed(mean, sd)
     assert np.all(np.isfinite(draws)) and np.all(draws > 0)
     reference = stats.truncnorm(-mean / sd, np.inf, loc=mean, scale=sd)
     assert stats.kstest(draws, reference.cdf).pvalue > 1e-3
+
+
+def test_tail_quadrature_matches_the_closed_form_where_both_are_accurate():
+    from relyflow.models.lba import _tail_pdf_cdf
+
+    t = np.linspace(0.2, 8.0, 50)
+    v, s, b, A = np.full(50, -3.5), np.full(50, 1.0), np.full(50, 3.0), np.full(50, 1.5)
+    pdf_closed, cdf_closed = accumulator_pdf_cdf(t, v, s, b, A)  # v/s = -3.5: closed form
+    pdf_quad, cdf_quad = _tail_pdf_cdf(t, v, s, b, A)
+    # Near t = 0 the closed form rounds the CDF to 0; quadrature keeps ~1e-12.
+    np.testing.assert_allclose(pdf_quad, pdf_closed, rtol=1e-6, atol=1e-10)
+    np.testing.assert_allclose(cdf_quad, cdf_closed, rtol=1e-6, atol=1e-10)
+
+
+@pytest.mark.parametrize(("v", "s"), [(-4.0, 0.1), (-1.0, 0.01), (-3.0, 0.5)])
+def test_density_stays_finite_and_normalized_deep_in_the_truncation_tail(v, s):
+    # v/s from -6 to -100: the closed form would divide rounding noise by ~0.
+    # Rates sit near 0, so finishing times can be ~1e4 s; integrate over log t.
+    def pdf_log_t(y):
+        t = np.exp(y)
+        return float(accumulator_pdf_cdf(t, v, s, 2.0, 1.0)[0]) * t
+
+    t = np.geomspace(0.01, 1e12, 300)
+    values, cdf = accumulator_pdf_cdf(t, v, s, 2.0, 1.0)
+    assert np.all(np.isfinite(values)) and np.all(values >= 0)
+    assert np.all(np.diff(cdf) >= -1e-12) and cdf[-1] == pytest.approx(1.0, abs=1e-3)
+    total = integrate.quad(pdf_log_t, np.log(0.01), np.log(1e12), limit=500)[0]
+    assert total == pytest.approx(1.0, abs=1e-3)

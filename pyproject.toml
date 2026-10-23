@@ -41,6 +41,8 @@ dependencies = [
 # BayesFlow runs on Keras 3, which needs one backend installed.
 jax = ["jax>=0.6"]
 torch = ["torch>=2.6"]
+# Reference posteriors by NUTS (relyflow.mcmc): MCMC benchmark and posterior refinement.
+mcmc = ["jax>=0.7", "numpyro>=0.18"]
 dev = [
     "pre-commit>=4",
     "pytest>=8",
@@ -57,7 +59,7 @@ packages = ["src/relyflow"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = ["-ra", "--strict-markers"]
+addopts = ["-ra", "--strict-markers", "-m", "not slow"]
 markers = ["slow: long-running tests (network training, large simulation sweeps)"]
 filterwarnings = [
     # Keras converting tensors under NumPy >= 2.4; upstream, harmless.
