@@ -17,6 +17,10 @@ ROADMAP.md; check it to see what stage the project is at.
   and density (`lba.py`), static advisory/reliance models (`accumulator.py`), delta-rule
   learning extension (`learning.py`)
 - `src/relyflow/design.py`: `make_design` for unaided/aided block sequences
+- `src/relyflow/inference/`: BayesFlow training (`training.py`), network inputs (`features.py`,
+  NumPy only), training design prior (`designs.py`), loading/sampling (`amortizer.py`),
+  release downloads (`pretrained.py`)
+- `checkpoints/`: local training outputs (git-ignored); set `RELYFLOW_WEIGHTS_DIR` to use them
 - `benchmarks/`: throughput scripts, run directly with Python
 - `docs/models/`: model specs with sources; keep them in sync with the priors in code
 - `src/relyflow/{inference,diagnostics,comparison,synthetic,reports}/`: one subpackage per roadmap milestone
@@ -28,5 +32,9 @@ ROADMAP.md; check it to see what stage the project is at.
 - Simulators take an `np.random.Generator`, are vectorized over parameter sets, and come
   with qualitative-pattern tests.
 - LBA RTs have infinite variance: compare medians/quantiles, per stimulus type, in tests.
+- Train set encoders with `KERAS_BACKEND=torch` (Apple GPU), recurrent nets with `jax`
+  (CPU). Never run two GPU (MPS) jobs at once: it caused a Metal internal error.
+- Changing a model's priors or a network's inputs requires retraining; loading warns
+  when a network's saved prior signature no longer matches the code.
 - Do not invent model equations or citations. Every model spec cites its source paper,
   and anything relyflow adds beyond the papers (e.g. the learning coupling) is labelled.

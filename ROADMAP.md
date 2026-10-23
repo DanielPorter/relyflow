@@ -46,27 +46,41 @@ Results are in [docs/models/](docs/models/README.md#simulators-and-likelihood).
       (milestones 6–7) instead of widening the priors.
 - [x] Throughput: about 6M trials/s per core for every model (`benchmarks/simulators.py`).
 
-## 3. Amortized inference networks
+## 3. Amortized inference networks ✅
 
-- [ ] Training-set generation with fixed seeds and saved configs.
-- [ ] Handle the LBA's long RT tail (infinite RT variance; 0.5–0.8% of simulated
-      trials over 10 s): censor at a task deadline and/or summarize log RTs, and
-      match whatever preprocessing real data get.
-- [ ] Static models: permutation-invariant set encoder (e.g. SetTransformer or DeepSet)
-      feeding a normalizing-flow or flow-matching posterior.
-- [ ] Learning model: sequence-aware summary network, because trial order carries the
-      information about reliability updating.
-- [ ] Support variable trial counts, so the same network serves short and long sessions.
-- [ ] Ship or download pretrained weights, versioned alongside the simulator code.
+Details and results are in [docs/inference.md](docs/inference.md).
 
-**Done when** each model has a trained network that returns posteriors for one operator
-in under a few seconds on a laptop CPU.
+- [x] Online training-set generation with fixed seeds; every run saves its full
+      `TrainingConfig`, versions and the model's prior signature
+      (`python -m relyflow.inference train`).
+- [x] Long RT tail: networks see log RTs clipped to [0.05 s, 30 s]. Simulations
+      are not truncated, so they stay consistent with the exact likelihood used in
+      milestone 4. Fitting real data with deadlines is revisited in milestone 6.
+- [x] Static models: set transformer + affine coupling flow. Recovery R² 0.60–0.90,
+      calibrated 90% intervals, 0.03 s per operator.
+- [x] Learning model: deep set over trial features plus each trial's aid track
+      record (sequence-aware history features), with 14 learning statistics passed
+      to the flow. A recurrent network did worse on every parameter. Non-learning
+      parameters R² 0.72–0.90; log learning rate R² 0.28, against 0.58 for a
+      near-exact posterior (0.02 without the statistics). The starting belief `r0`
+      is barely identifiable (near-exact R² 0.19).
+- [x] Variable trial counts (120–1,200 in training, on a grid of 60 to avoid
+      recompiling), with warnings outside the trained range or without unaided
+      trials.
+- [ ] Publish pretrained networks as versioned GitHub release assets
+      (`relyflow.inference.pretrained`: download once, verify SHA-256, cache;
+      `RELYFLOW_WEIGHTS_DIR` for local networks). Code done; the release follows
+      the milestone 3 commit.
 
 ## 4. Validation suite
 
 - [ ] Parameter recovery: posterior mean vs. truth, R², NRMSE, posterior contraction.
 - [ ] Simulation-based calibration: rank histograms and ECDF difference plots.
 - [ ] Posterior predictive checks on accuracy, RT quantiles, misuse and disuse.
+- [ ] Learning model: close the gap in `alpha` recovery (network R² 0.28 vs. 0.58
+      near-exact) by refining the network's (`alpha`, `r0`) draws with the exact
+      likelihood, and check `alpha`'s slight overconfidence (86% coverage of 90%
+      intervals).
 - [ ] MCMC benchmark: compare amortized and NUTS posteriors (means, SDs,
       distributional distance) and wall-clock time. All three models have exact
       likelihoods (`model.log_likelihood`), so the learning model can be

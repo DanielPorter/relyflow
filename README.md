@@ -2,9 +2,10 @@
 
 **Amortized Bayesian inference for cognitive models of how people use automated decision aids.**
 
-> **Status: pre-alpha.** The trial-data layer, the model specifications and the
-> validated simulators ([docs/models/](docs/models/)) are done. Everything else below
-> is the target design.
+> **Status: pre-alpha.** The trial-data layer, the model specifications, the validated
+> simulators ([docs/models/](docs/models/)) and the amortized inference networks
+> ([docs/inference.md](docs/inference.md)) are done. Everything else below is the
+> target design.
 > Progress is tracked in [ROADMAP.md](ROADMAP.md).
 
 relyflow fits evidence-accumulation models of automation use to one operator's

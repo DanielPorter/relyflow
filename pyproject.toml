@@ -59,6 +59,10 @@ packages = ["src/relyflow"]
 testpaths = ["tests"]
 addopts = ["-ra", "--strict-markers"]
 markers = ["slow: long-running tests (network training, large simulation sweeps)"]
+filterwarnings = [
+    # Keras converting tensors under NumPy >= 2.4; upstream, harmless.
+    "ignore:__array__ implementation doesn't accept a copy keyword:DeprecationWarning",
+]
 
 [tool.coverage.run]
 source = ["relyflow"]
