@@ -89,22 +89,40 @@ posterior:
 from relyflow.comparison import posterior_predictive_check
 from relyflow.inference import load
 
-result = posterior_predictive_check(load("reliance"), trial_data)  # ~0.2 s
+result = posterior_predictive_check(load("reliance"), trial_data)  # ~3 s
+result.flagged, result.p_value
 ```
 
-It simulates one replicate dataset from each of 300 posterior draws on the
-operator's design and ranks the observed statistics among the replicates. The
-posterior was fitted to the observed data, so the observed operator is closer to
-the replicates than an exchangeable one would be. The check is conservative, with
-a false-alarm rate below α, but it is much more sensitive to subtle misfit. The
-two checks are complementary: gross departures, such as an operator who copies
-the aid without looking at the stimulus, are partly absorbed by the fit and caught
-better by the prior check.
+It simulates one replicate dataset from each of 200 posterior draws on the
+operator's design, and measures how far the observed statistics lie from the
+replicates: the Mahalanobis distance, standardized by the replicates' own
+distances.
 
-A flag from either check means the posterior and model probabilities for that
-operator should not be trusted. Common causes are lapses or contaminant responses,
-response strategies outside the models, trends over the session such as fatigue,
-or a task much faster or slower than the priors cover. Some misspecification
+A posterior predictive p-value on its own is conservative. The posterior was
+fitted to the observed data, so the observed operator sits closer to the
+replicates than an exchangeable one would, and real misfit is flagged less often
+than it should be. relyflow calibrates it (Hjort et al., 2006). It repeats the
+whole procedure, a fresh posterior included, for 100 datasets simulated from the
+model's prior on the same design, and ranks the observed discrepancy among
+theirs. If the model, with prior-plausible parameters, produced the data, the
+observed operator is exchangeable with those 100, and the false-alarm rate is α
+(to within the rank resolution, 1/101). Like the prior check's, this rate is an
+average over prior-plausible operators; it can differ for parameters deep in the
+prior's tails. With MCMC this would mean 100 extra posterior fits per operator; with
+amortized inference it is one network pass. Pass `n_calibration=0` for the fast
+(~0.2 s), conservative version.
+
+The two checks are complementary. The posterior check is far more sensitive to
+subtle misfit, such as lapses, fatigue or a different decision process. Gross
+departures, such as an operator who copies the aid without looking at the
+stimulus, are partly absorbed by the fit and are caught better by the prior
+check. To use both with a known overall false-alarm rate, flag an operator when
+either p-value is at most α / 2 (Bonferroni): the combined rate is then at most α.
+
+A flag means the posterior and model probabilities for that operator should not
+be trusted. Common causes are lapses or contaminant responses, response strategies
+outside the models, trends over the session such as fatigue, or a task much
+faster or slower than the priors cover. Some misspecification
 cannot be detected from one operator's data: an operator who responds at random
 with model-like RTs looks like a model operator whose accumulation rates do not
 depend on the stimulus.
@@ -128,23 +146,29 @@ and the detection rate on six deliberately misspecified generators
   0.94 (reliance vs. advisory) and 0.80 (learning vs. reliance). Both pick the true
   model about as often (0.87 and 0.88).
 - **Misspecification checks.** At alpha = 0.05, with 150 operators per condition
-  (600 trials each):
+  (600 trials each). Misspecified data are checked against the reliance model.
 
-  | Condition | Prior check | Posterior check | Either |
-  | --- | --- | --- | --- |
-  | Data from the models (false alarms) | 0.04 | 0.00 | 0.04 |
-  | 10% lapses | 0.16 | 0.52 | 0.57 |
-  | Random responder | 0.57 | 0.55 | 0.71 |
-  | Always follows the aid | 0.94 | 0.65 | 0.95 |
-  | Diffusion model, advice biases the start point | 0.07 | 0.79 | 0.79 |
-  | Fatigue (rates halve over the session) | 0.06 | 0.47 | 0.50 |
-  | Slow task (RT + 2 s) | 0.72 | 0.73 | 0.90 |
+  | Condition | Prior check | Posterior, uncalibrated | Posterior, calibrated | Combined |
+  | --- | --- | --- | --- | --- |
+  | Data from the models (false alarms) | 0.04 | 0.00 | 0.04 | 0.03 |
+  | 10% lapses | 0.16 | 0.52 | 0.79 | 0.67 |
+  | Random responder | 0.57 | 0.55 | 0.69 | 0.65 |
+  | Always follows the aid | 0.94 | 0.68 | 0.85 | 0.95 |
+  | Diffusion model, advice biases the start point | 0.07 | 0.78 | 0.95 | 0.86 |
+  | Fatigue (rates halve over the session) | 0.06 | 0.49 | 0.75 | 0.65 |
+  | Slow task (RT + 2 s) | 0.72 | 0.71 | 0.94 | 0.91 |
 
-  Use the "either" flag: it keeps the false-alarm rate near alpha because the
-  posterior check is conservative.
+  Calibration brings the posterior check's false-alarm rate up to its nominal
+  level and raises its detection rate by 0.14 to 0.27. On its own it is the most
+  sensitive check for every generator except the operator who always follows the
+  aid. Combined with the prior check (each at α / 2), it catches 65–95% of every
+  generator at a 3% false-alarm rate.
 
 ## References
 
+- Hjort, N. L., Dahl, F. A., & Steinbakk, G. H. (2006). Post-processing posterior
+  predictive p values. *Journal of the American Statistical Association, 101*(475),
+  1157–1174. https://doi.org/10.1198/016214505000001393
 - Jeffrey, N., & Wandelt, B. D. (2024). Evidence networks: Simple losses for fast,
   amortized, neural Bayesian model comparison. *Machine Learning: Science and
   Technology, 5*(1), 015008. https://doi.org/10.1088/2632-2153/ad1a4d

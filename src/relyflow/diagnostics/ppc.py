@@ -34,11 +34,30 @@ def ppc_statistics(
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", RuntimeWarning)  # empty cells give NaN
         accuracy = [np.nanmean(np.where(masks[c], correct, np.nan), axis=-1) for c in CELLS]
-        quantiles = []
-        for cell in CELLS:
-            correct_rt = np.where(masks[cell] & correct, rt, np.nan)
-            quantiles.extend(np.nanquantile(correct_rt, q, axis=-1) for q in RT_QUANTILES)
+    quantiles = []
+    for cell in CELLS:
+        correct_rt = np.where(masks[cell] & correct, rt, np.nan)
+        quantiles.extend(nan_quantiles(correct_rt, RT_QUANTILES))
     return np.stack(accuracy + quantiles, axis=-1)
+
+
+def nan_quantiles(x: np.ndarray, q) -> np.ndarray:
+    """``np.nanquantile(x, q, axis=-1)`` (linear interpolation) with one sort.
+
+    Several times faster than NumPy's version on many rows. Rows with no
+    finite values give NaN. Returns shape ``(len(q), *x.shape[:-1])``.
+    """
+    q = np.asarray(q, dtype=np.float64)
+    count = np.count_nonzero(~np.isnan(x), axis=-1)[..., None]
+    ordered = np.sort(x, axis=-1)  # NaN sorts last
+    position = np.maximum(count - 1, 0) * q
+    lower = np.floor(position).astype(np.intp)
+    upper = np.minimum(lower + 1, np.maximum(count - 1, 0))
+    low = np.take_along_axis(ordered, lower, axis=-1)
+    high = np.take_along_axis(ordered, upper, axis=-1)
+    with np.errstate(invalid="ignore"):
+        values = low + (position - lower) * (high - low)
+    return np.moveaxis(np.where(count > 0, values, np.nan), -1, 0)
 
 
 def posterior_predictive(

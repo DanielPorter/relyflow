@@ -13,6 +13,7 @@ al., 2024).
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass
 
 import numpy as np
@@ -33,6 +34,7 @@ class OODResult:
     flagged: bool
     alpha: float
     n_reference: int
+    uncalibrated_p_value: float | None = None
 
 
 def ood_statistics(
@@ -47,6 +49,11 @@ def ood_statistics(
     tell the models apart, so it can ignore features none of them produce, such as
     trends over the session.
     """
+    return _fill_missing(_raw_statistics(stimulus, advice, choice, rt))
+
+
+def _raw_statistics(stimulus, advice, choice, rt) -> np.ndarray:
+    """:func:`ood_statistics` with NaN where a statistic is undefined."""
     from relyflow.diagnostics.ppc import ppc_statistics
 
     log_rt = np.log(rt)
@@ -58,7 +65,8 @@ def ood_statistics(
         position**2
     ).sum()
     third = max(n_trials // 3, 1)
-    with np.errstate(invalid="ignore"):
+    with np.errstate(invalid="ignore"), warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)  # undefined statistics give NaN
         error_rt = np.nanmedian(np.where(correct, np.nan, log_rt), axis=-1)
         followed = np.where(aided, choice == advice, np.nan)
         stats = np.column_stack(
@@ -71,9 +79,16 @@ def ood_statistics(
                 correct[..., -third:].mean(axis=-1) - correct[..., :third].mean(axis=-1),
             ]
         )
-    # Statistics undefined for a dataset (e.g. no errors) take the column median.
-    medians = np.nanmedian(stats, axis=0)
-    return np.where(np.isnan(stats), medians, stats)
+    return stats
+
+
+def _fill_missing(stats: np.ndarray) -> np.ndarray:
+    """Statistics undefined for a dataset (e.g. no errors) take the median over the
+    datasets compared with it (axis -2), or 0 if undefined for all of them."""
+    with np.errstate(invalid="ignore"), warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        medians = np.nanmedian(stats, axis=-2, keepdims=True)
+    return np.nan_to_num(np.where(np.isnan(stats), medians, stats), nan=0.0)
 
 
 def mahalanobis_ranks(summaries: np.ndarray, ridge: float = 1e-3) -> np.ndarray:
@@ -152,7 +167,8 @@ def ood_check(
 def posterior_predictive_check(
     amortizer,
     data: TrialData,
-    n_replicates: int = 300,
+    n_replicates: int = 200,
+    n_calibration: int = 100,
     alpha: float = 0.05,
     seed: int | None = None,
 ) -> OODResult:
@@ -160,32 +176,107 @@ def posterior_predictive_check(
 
     Draws ``n_replicates`` parameter sets from the amortized posterior
     (``relyflow.inference.Amortizer``), simulates one dataset from each on the
-    operator's own design, and ranks the observed :func:`ood_statistics` among the
-    replicates by Mahalanobis distance. Because the posterior has already been fitted
-    to the observed data, this is conservative (false alarms below ``alpha``), but it
-    is much more sensitive than :func:`ood_check` to subtle misfit such as lapses or
-    trends over the session. Complements rather than replaces :func:`ood_check`,
-    which catches gross departures that a fitted model partly absorbs.
+    operator's own design, and measures how far the observed :func:`ood_statistics`
+    lie from the replicates (Mahalanobis distance, standardized by the replicates'
+    distances). This is much more sensitive than :func:`ood_check` to subtle misfit
+    such as lapses or trends over the session, while :func:`ood_check` is better at
+    gross departures that a fitted model partly absorbs.
+
+    A posterior predictive p-value on its own is conservative: the posterior was
+    fitted to the same data. It is calibrated (Hjort et al., 2006) by repeating the
+    whole procedure, posterior included, for ``n_calibration`` datasets simulated
+    from the model's prior on the same design, and ranking the observed discrepancy
+    among theirs. If the model with prior-plausible parameters produced the data,
+    the false-alarm rate is then exactly ``alpha`` (up to the rank resolution
+    ``1 / (n_calibration + 1)``). Amortization makes this affordable: the
+    ``n_calibration`` extra posteriors take one network pass. With the defaults the
+    check takes a few seconds; ``n_calibration=0`` skips calibration (about 0.2 s)
+    and returns the conservative p-value.
     """
     rng = np.random.default_rng(seed)
     model = amortizer.model
-    draws = amortizer.sample(data, num_samples=n_replicates, seed=seed)
-    n = data.n_trials
-    stimulus = np.broadcast_to(data.stimulus, (n_replicates, n))
-    advice = np.broadcast_to(data.advice, (n_replicates, n))
-    choice, rt = model.simulate(draws, stimulus, advice, rng)
-    stats = ood_statistics(
-        np.vstack([data.stimulus, stimulus]),
-        np.vstack([data.advice, advice]),
-        np.vstack([data.choice, choice]),
-        np.vstack([data.rt, rt]),
+    choice, rt = data.choice[None], data.rt[None]
+    if n_calibration:
+        n = data.n_trials
+        null_choice, null_rt = model.simulate(
+            model.sample_prior(n_calibration, rng),
+            np.broadcast_to(data.stimulus, (n_calibration, n)),
+            np.broadcast_to(data.advice, (n_calibration, n)),
+            rng,
+        )
+        choice, rt = np.vstack([choice, null_choice]), np.vstack([rt, null_rt])
+    distance, discrepancy, raw = _posterior_discrepancies(
+        amortizer, data.stimulus, data.advice, choice, rt, n_replicates, rng, seed
     )
-    distances = mahalanobis_ranks(stats)
-    p_value = rank_p_value(distances, observed_index=0)
+    p_value = rank_p_value(discrepancy) if n_calibration else raw[0]
     return OODResult(
-        p_value=p_value,
-        distance=float(distances[0]),
-        flagged=p_value <= alpha,
+        p_value=float(p_value),
+        distance=float(distance[0]),
+        flagged=bool(p_value <= alpha),
         alpha=alpha,
-        n_reference=n_replicates,
+        n_reference=n_calibration or n_replicates,
+        uncalibrated_p_value=float(raw[0]),
     )
+
+
+def _posterior_discrepancies(
+    amortizer,
+    stimulus: np.ndarray,
+    advice: np.ndarray,
+    choice: np.ndarray,
+    rt: np.ndarray,
+    n_replicates: int,
+    rng: np.random.Generator,
+    seed: int | None,
+    chunk: int = 20,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Posterior predictive comparison for ``m`` datasets sharing one design.
+
+    ``stimulus`` and ``advice`` have shape ``(n_trials,)``; ``choice`` and ``rt``
+    ``(m, n_trials)``. Every dataset is treated identically: its own posterior, its
+    own replicates. Returns, each of shape ``(m,)``, the dataset's Mahalanobis
+    distance among its replicates, that distance standardized by the replicates'
+    distances, and the uncalibrated posterior predictive p-value.
+    """
+    model = amortizer.model
+    m, n = choice.shape
+    draws = amortizer.sample_batch(
+        np.broadcast_to(stimulus, (m, n)),
+        np.broadcast_to(advice, (m, n)),
+        choice,
+        rt,
+        num_samples=n_replicates,
+        seed=seed,
+    )
+    distance, discrepancy, p_value = np.empty(m), np.empty(m), np.empty(m)
+    group = n_replicates + 1
+    for start in range(0, m, chunk):
+        stop = min(start + chunk, m)
+        k = stop - start
+        params = {name: values[start:stop].reshape(-1) for name, values in draws.items()}
+        rep_choice, rep_rt = model.simulate(
+            params,
+            np.broadcast_to(stimulus, (k * n_replicates, n)),
+            np.broadcast_to(advice, (k * n_replicates, n)),
+            rng,
+        )
+        # Each group of rows is one dataset followed by its replicates.
+        all_choice = np.concatenate(
+            [choice[start:stop, None], rep_choice.reshape(k, n_replicates, n)], axis=1
+        ).reshape(k * group, n)
+        all_rt = np.concatenate(
+            [rt[start:stop, None], rep_rt.reshape(k, n_replicates, n)], axis=1
+        ).reshape(k * group, n)
+        stats = _raw_statistics(
+            np.broadcast_to(stimulus, (k * group, n)),
+            np.broadcast_to(advice, (k * group, n)),
+            all_choice,
+            all_rt,
+        )
+        stats = _fill_missing(stats.reshape(k, group, -1))
+        for j in range(k):
+            d = mahalanobis_ranks(stats[j])
+            distance[start + j] = d[0]
+            discrepancy[start + j] = (d[0] - d[1:].mean()) / d[1:].std()
+            p_value[start + j] = rank_p_value(d)
+    return distance, discrepancy, p_value

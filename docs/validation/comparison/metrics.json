@@ -44,40 +44,47 @@
     "rates": {
       "false alarms (data from the models)": {
         "prior": 0.04,
-        "posterior": 0.0,
-        "either": 0.04
+        "posterior_uncalibrated": 0.0,
+        "posterior": 0.04,
+        "combined": 0.03333333333333333
       },
       "detection: contaminated (10% lapses)": {
         "prior": 0.16,
-        "posterior": 0.52,
-        "either": 0.5666666666666667
+        "posterior_uncalibrated": 0.52,
+        "posterior": 0.7866666666666666,
+        "combined": 0.6666666666666666
       },
       "detection: random responder": {
         "prior": 0.5666666666666667,
-        "posterior": 0.5466666666666666,
-        "either": 0.7066666666666667
+        "posterior_uncalibrated": 0.5533333333333333,
+        "posterior": 0.6933333333333334,
+        "combined": 0.6466666666666666
       },
       "detection: always follows the aid": {
         "prior": 0.94,
-        "posterior": 0.6466666666666666,
-        "either": 0.9466666666666667
+        "posterior_uncalibrated": 0.68,
+        "posterior": 0.8466666666666667,
+        "combined": 0.9533333333333334
       },
       "detection: diffusion, advice biases start point": {
         "prior": 0.07333333333333333,
-        "posterior": 0.7933333333333333,
-        "either": 0.7933333333333333
+        "posterior_uncalibrated": 0.78,
+        "posterior": 0.9533333333333334,
+        "combined": 0.86
       },
       "detection: fatigue (rates halve over session)": {
         "prior": 0.06,
-        "posterior": 0.47333333333333333,
-        "either": 0.5
+        "posterior_uncalibrated": 0.4866666666666667,
+        "posterior": 0.7533333333333333,
+        "combined": 0.6466666666666666
       },
       "detection: slow task (RT + 2 s)": {
         "prior": 0.72,
-        "posterior": 0.7266666666666667,
-        "either": 0.9
+        "posterior_uncalibrated": 0.7066666666666667,
+        "posterior": 0.94,
+        "combined": 0.9066666666666666
       }
     }
   },
-  "seconds": 803.6
+  "seconds": 4052.3
 }

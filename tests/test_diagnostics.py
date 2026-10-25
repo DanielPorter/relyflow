@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import pytest
 
@@ -75,3 +77,18 @@ def test_compare_measures_agreement_in_reference_sds():
     shifted = compare({"x": rng.normal(1, 1, 20_000)}, reference).iloc[0]
     assert shifted["mean_error"] == pytest.approx(0.5, abs=0.05)
     assert shifted["sd_ratio"] == pytest.approx(0.5, abs=0.05)
+
+
+def test_nan_quantiles_match_numpy():
+    from relyflow.diagnostics.ppc import nan_quantiles
+
+    rng = np.random.default_rng(11)
+    x = rng.lognormal(size=(40, 3, 25))
+    x[rng.random(x.shape) < 0.4] = np.nan
+    x[0, 0] = np.nan  # a row with no values
+    x[1, 1, 1:] = np.nan  # a row with one value
+    q = (0.1, 0.5, 0.9)
+    with np.errstate(all="ignore"), warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        expected = np.nanquantile(x, q, axis=-1)
+    np.testing.assert_allclose(nan_quantiles(x, q), expected, equal_nan=True, rtol=1e-12)

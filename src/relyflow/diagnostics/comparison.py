@@ -127,29 +127,33 @@ def crosscheck(comparison: ModelComparison, amortizers: dict, n_per_model: int, 
 def ood_rates(
     comparison: ModelComparison, nets: dict, n: int, n_reference: int, alpha: float, seed: int
 ) -> dict:
-    """Flag rates of the prior check (``ood_check``), the posterior check
-    (``posterior_predictive_check``) and either, on model data and misspecified data.
+    """Flag rates of the misspecification checks on model data and misspecified data.
 
-    Model data are split evenly across the models, each checked against its own
-    posterior network. Misspecified data are checked against the reliance model,
-    the most flexible static model.
+    Reports the prior check (``ood_check``), the posterior check
+    (``posterior_predictive_check``) before and after calibration, and the two
+    calibrated checks combined, each at ``alpha / 2`` (Bonferroni), which keeps
+    the combined false-alarm rate at most ``alpha``. Model data are split evenly
+    across the models, each checked against its own posterior network.
+    Misspecified data are checked against the reliance model, the most flexible
+    static model.
     """
     rng = np.random.default_rng(seed)
 
-    def flag(data: TrialData, net, i: int) -> tuple[bool, bool]:
-        prior = ood_check(comparison, data, n_reference=n_reference, alpha=alpha, rng=rng)
-        posterior = posterior_predictive_check(net, data, alpha=alpha, seed=seed + i)
-        return prior.flagged, posterior.flagged
+    def p_values(data: TrialData, net, i: int) -> tuple[float, float, float]:
+        prior = ood_check(comparison, data, n_reference=n_reference, rng=rng)
+        posterior = posterior_predictive_check(net, data, seed=seed + i)
+        return prior.p_value, posterior.uncalibrated_p_value, posterior.p_value
 
-    def summarize(flags) -> dict:
-        flags = np.array(flags, dtype=bool)
+    def summarize(p) -> dict:
+        p = np.array(p)
         return {
-            "prior": float(flags[:, 0].mean()),
-            "posterior": float(flags[:, 1].mean()),
-            "either": float(flags.any(axis=1).mean()),
+            "prior": float(np.mean(p[:, 0] <= alpha)),
+            "posterior_uncalibrated": float(np.mean(p[:, 1] <= alpha)),
+            "posterior": float(np.mean(p[:, 2] <= alpha)),
+            "combined": float(np.mean(np.minimum(p[:, 0], p[:, 2]) <= alpha / 2)),
         }
 
-    flags = []
+    p = []
     for k, name in enumerate(comparison.models):
         model = get_model(name)
         m = n // len(comparison.models) + (k < n % len(comparison.models))
@@ -157,17 +161,17 @@ def ood_rates(
         choice, rt = model.simulate(model.sample_prior(m, rng), stimulus, advice, rng)
         for i in range(m):
             data = TrialData(stimulus[i], advice[i], choice[i], rt[i])
-            flags.append(flag(data, nets[name], i))
-    results = {"false alarms (data from the models)": summarize(flags)}
+            p.append(p_values(data, nets[name], i))
+    results = {"false alarms (data from the models)": summarize(p)}
 
     for name, generator in SCENARIOS.items():
         stimulus, advice = _standard_design(n, rng, shift=False)
         choice, rt = generator(stimulus, advice, rng)
-        flags = [
-            flag(TrialData(stimulus[i], advice[i], choice[i], rt[i]), nets["reliance"], i)
+        p = [
+            p_values(TrialData(stimulus[i], advice[i], choice[i], rt[i]), nets["reliance"], i)
             for i in range(n)
         ]
-        results[f"detection: {name}"] = summarize(flags)
+        results[f"detection: {name}"] = summarize(p)
     return results
 
 
@@ -268,15 +272,17 @@ def render(m: dict) -> str:
         f"alpha = {ood['alpha']}, {ood['n_reference']} reference operators per check, "
         f"{ood['n_per_condition']} operators per condition (200 unaided + 400 aided trials).",
         "",
-        "Prior check: could any model, with any prior-plausible parameters, produce the",
-        "data (exact false-alarm rate)? Posterior check: does the fitted model reproduce",
-        "them (conservative)? Either: flagged by at least one.",
+        "Prior check: could any model, with prior-plausible parameters, produce the data?",
+        "Posterior check: does the fitted model reproduce them? Uncalibrated, it is",
+        "conservative; calibrated against datasets from the prior (Hjort et al., 2006), its",
+        "false-alarm rate is alpha. Combined: either calibrated check at alpha / 2.",
         "",
-        "| Condition | Prior check | Posterior check | Either |",
-        "| --- | --- | --- | --- |",
+        "| Condition | Prior check | Posterior, uncalibrated | Posterior, calibrated | Combined |",
+        "| --- | --- | --- | --- | --- |",
     ]
     lines += [
-        f"| {k} | {v['prior']:.2f} | {v['posterior']:.2f} | {v['either']:.2f} |"
+        f"| {k} | {v['prior']:.2f} | {v['posterior_uncalibrated']:.2f} "
+        f"| {v['posterior']:.2f} | {v['combined']:.2f} |"
         for k, v in ood["rates"].items()
     ]
     return "\n".join(lines) + "\n"

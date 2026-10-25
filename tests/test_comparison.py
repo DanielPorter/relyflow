@@ -60,10 +60,22 @@ def test_ood_check_returns_a_valid_p_value(tiny_comparison):
     assert result.flagged == (result.p_value <= 0.05)
 
 
-def test_posterior_predictive_check_returns_a_valid_p_value(tiny_amortizer):
-    result = posterior_predictive_check(tiny_amortizer, operator(7), n_replicates=40, seed=8)
-    assert 1 / 41 <= result.p_value <= 1
+def test_calibrated_posterior_predictive_check_returns_valid_p_values(tiny_amortizer):
+    result = posterior_predictive_check(
+        tiny_amortizer, operator(7), n_replicates=40, n_calibration=19, seed=8
+    )
+    assert 1 / 20 <= result.p_value <= 1
+    assert 1 / 41 <= result.uncalibrated_p_value <= 1
     assert result.flagged == (result.p_value <= 0.05)
+    assert result.n_reference == 19
+
+
+def test_uncalibrated_posterior_predictive_check(tiny_amortizer):
+    result = posterior_predictive_check(
+        tiny_amortizer, operator(7), n_replicates=40, n_calibration=0, seed=8
+    )
+    assert result.p_value == result.uncalibrated_p_value
+    assert 1 / 41 <= result.p_value <= 1
     assert result.n_reference == 40
 
 

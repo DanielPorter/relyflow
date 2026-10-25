@@ -100,8 +100,8 @@ the way, the LBA density was made stable deep in the truncation tail.
       (`relyflow.comparison.ModelComparison`, an evidence network).
 - [x] Out-of-distribution check that flags data the simulators cannot plausibly produce:
       a prior predictive rank test in learned-summary plus statistic space with an exact
-      false-alarm rate (`ood_check`), and a posterior predictive check against the
-      fitted model (`posterior_predictive_check`).
+      false-alarm rate (`ood_check`), and a calibrated posterior predictive check
+      against the fitted model (`posterior_predictive_check`).
 - [x] Cross-check of classifier probabilities against importance-sampled marginal
       likelihoods (`relyflow.inference.refine.log_evidence`).
 
@@ -113,10 +113,12 @@ simulations, model probabilities are calibrated (ECE 0.009, accuracy 0.73; error
 mostly nested models with negligible excitation or learning, for which the data cannot
 decide). They agree with the exact likelihood (same most probable model for 90% of
 operators, log Bayes factor correlation 0.94 for reliance vs. advisory and 0.80 for
-learning vs. reliance). At alpha = 0.05, the two checks together flag 4% of operators
-simulated from the models, and catch 50–95% of six misspecified generators (lapses,
-random responding, always following the aid, a diffusion model with start-point bias,
-fatigue, a slow task).
+learning vs. reliance). At alpha = 0.05, the posterior predictive check, calibrated
+against prior-predictive datasets (Hjort et al., 2006; affordable because every extra
+posterior is one network pass), flags 4% of operators simulated from the models and
+catches 69–95% of six misspecified generators (lapses, random responding, always
+following the aid, a diffusion model with start-point bias, fatigue, a slow task).
+Combined with the prior check at alpha / 2 each, it flags 3% and catches 65–95%.
 
 ## 6. Per-operator fitting interface and reports
 
