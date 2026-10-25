@@ -4,9 +4,10 @@
 
 > **Status: pre-alpha.** The trial-data layer, the model specifications, the validated
 > simulators ([docs/models/](docs/models/)), the amortized inference networks
-> ([docs/inference.md](docs/inference.md)) and the validation suite
-> ([docs/validation/](docs/validation/README.md)) are done. Everything else below is
-> the target design.
+> ([docs/inference.md](docs/inference.md)), the validation suite
+> ([docs/validation/](docs/validation/README.md)), and model comparison with
+> misspecification checks ([docs/comparison.md](docs/comparison.md)) are done.
+> Everything else below is the target design.
 > Progress is tracked in [ROADMAP.md](ROADMAP.md).
 
 relyflow fits evidence-accumulation models of automation use to one operator's
@@ -29,7 +30,7 @@ person. It is built to answer three questions:
 | Simulators | Vectorized simulators, validated against known qualitative patterns |
 | Inference | Pretrained amortized posterior networks: a set encoder for static models, a sequence encoder for learning models |
 | Validation | Parameter recovery, simulation-based calibration, posterior predictive checks and an MCMC benchmark |
-| Model checks | Amortized model comparison (advising vs. reliance) and out-of-distribution flags |
+| Model checks | Amortized model comparison (advisory vs. reliance vs. learning) and misspecification flags with a known false-alarm rate |
 | Reports | Per-operator posteriors plus a calibration verdict: over-relying, under-relying or calibrated |
 | Synthetic operators | Simulated operator populations run against aids of different reliability |
 

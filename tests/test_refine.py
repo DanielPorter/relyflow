@@ -47,3 +47,12 @@ def test_importance_resampling_returns_draws_and_diagnostics(tiny):
     assert set(refined.draws) == set(amortizer.model.param_names)
     assert all(v.shape == (50,) for v in refined.draws.values())
     assert 1 <= refined.diagnostics["ess"] <= 200
+
+
+def test_log_evidence_is_finite_with_a_positive_ess(tiny):
+    from relyflow.inference.refine import log_evidence
+
+    amortizer, data = tiny
+    value, ess = log_evidence(amortizer, data, num_proposals=200, seed=3)
+    assert np.isfinite(value) and value < 0
+    assert 1 <= ess <= 200

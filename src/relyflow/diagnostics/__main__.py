@@ -20,8 +20,25 @@ def main(argv: list[str] | None = None) -> None:
     run.add_argument("--refine", choices=["importance"], default=None)
     run.add_argument("--seed", type=int, default=0)
     run.add_argument("--workers", type=int, default=10)
+    compare = commands.add_parser("compare", help="validate model comparison and the OOD check")
+    compare.add_argument("comparison", help="model-comparison training output directory")
+    compare.add_argument("--out", required=True)
+    compare.add_argument(
+        "--amortizers", default=None, help="directory of <model>/ posterior networks"
+    )
+    compare.add_argument("--n-calibration", type=int, default=3000)
+    compare.add_argument("--n-crosscheck-per-model", type=int, default=20)
+    compare.add_argument("--n-ood", type=int, default=150)
+    compare.add_argument("--n-reference", type=int, default=500)
+    compare.add_argument("--seed", type=int, default=0)
     args = vars(parser.parse_args(argv))
-    args.pop("command")
+    command = args.pop("command")
+    if command == "compare":
+        from relyflow.diagnostics.comparison import evaluate
+
+        metrics = evaluate(args.pop("comparison"), args.pop("out"), **args)
+        print(json.dumps(metrics["ood"]["rates"], indent=2))
+        return
     metrics = validate(args.pop("network"), args.pop("out"), **args)
     print(json.dumps(metrics["passed"], indent=2))
     sys.exit(0 if all(metrics["passed"].values()) else 1)

@@ -1,0 +1,83 @@
+{
+  "comparison": "checkpoints/comparison",
+  "calibration": {
+    "accuracy": 0.7286666666666667,
+    "expected_calibration_error": 0.009343577712774295,
+    "mean_probability_by_true_model": {
+      "advisory": {
+        "advisory": 0.628000020980835,
+        "reliance": 0.1889999955892563,
+        "learning": 0.18400000035762787
+      },
+      "reliance": {
+        "advisory": 0.1809999942779541,
+        "reliance": 0.6589999794960022,
+        "learning": 0.1599999964237213
+      },
+      "learning": {
+        "advisory": 0.19599999487400055,
+        "reliance": 0.17599999904632568,
+        "learning": 0.628000020980835
+      }
+    },
+    "mean_log_score": -0.6108948588371277
+  },
+  "n_calibration": 3000,
+  "crosscheck": {
+    "n_operators": 60,
+    "n_reliable_evidence": 37,
+    "mean_abs_probability_difference": 0.0864353484357145,
+    "same_most_probable_model": 0.9,
+    "log_bayes_factor_correlation": {
+      "reliance vs advisory": 0.9408506219248973,
+      "learning vs reliance": 0.7988281078994772
+    },
+    "accuracy": {
+      "classifier": 0.8666666666666667,
+      "exact": 0.8833333333333333
+    }
+  },
+  "ood": {
+    "alpha": 0.05,
+    "n_per_condition": 150,
+    "n_reference": 500,
+    "rates": {
+      "false alarms (data from the models)": {
+        "prior": 0.04,
+        "posterior": 0.0,
+        "either": 0.04
+      },
+      "detection: contaminated (10% lapses)": {
+        "prior": 0.16,
+        "posterior": 0.52,
+        "either": 0.5666666666666667
+      },
+      "detection: random responder": {
+        "prior": 0.5666666666666667,
+        "posterior": 0.5466666666666666,
+        "either": 0.7066666666666667
+      },
+      "detection: always follows the aid": {
+        "prior": 0.94,
+        "posterior": 0.6466666666666666,
+        "either": 0.9466666666666667
+      },
+      "detection: diffusion, advice biases start point": {
+        "prior": 0.07333333333333333,
+        "posterior": 0.7933333333333333,
+        "either": 0.7933333333333333
+      },
+      "detection: fatigue (rates halve over session)": {
+        "prior": 0.06,
+        "posterior": 0.47333333333333333,
+        "either": 0.5
+      },
+      "detection: slow task (RT + 2 s)": {
+        "prior": 0.72,
+        "posterior": 0.7266666666666667,
+        "either": 0.9
+      }
+    }
+  },
+  "seconds": 803.6
+}

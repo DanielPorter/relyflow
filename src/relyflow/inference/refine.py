@@ -100,11 +100,7 @@ def importance_resample(
     sample size of the proposals) and ``efficiency`` (ESS / number of proposals).
     """
     rng = np.random.default_rng(seed)
-    proposals = amortizer.sample(data, num_samples=num_proposals, seed=seed)
-    log_weights = log_posterior(amortizer.model, data, proposals) - network_log_density(
-        amortizer, data, proposals
-    )
-    log_weights = np.where(np.isfinite(log_weights), log_weights, -np.inf)
+    proposals, log_weights = _importance_weights(amortizer, data, num_proposals, seed)
     weights = np.exp(log_weights - log_weights.max())
     weights = np.minimum(weights, weights.mean() * np.sqrt(num_proposals))
     weights /= weights.sum()
@@ -115,6 +111,32 @@ def importance_resample(
         method="importance",
         diagnostics={"ess": float(ess), "efficiency": float(ess / num_proposals)},
     )
+
+
+def _importance_weights(amortizer: Amortizer, data: TrialData, num_proposals: int, seed):
+    """Network draws and their log importance weights (exact posterior ÷ network density)."""
+    proposals = amortizer.sample(data, num_samples=num_proposals, seed=seed)
+    log_weights = log_posterior(amortizer.model, data, proposals) - network_log_density(
+        amortizer, data, proposals
+    )
+    return proposals, np.where(np.isfinite(log_weights), log_weights, -np.inf)
+
+
+def log_evidence(
+    amortizer: Amortizer, data: TrialData, num_proposals: int = 8000, seed: int | None = None
+) -> tuple[float, float]:
+    """Importance-sampling estimate of log p(data | model), and its effective sample size.
+
+    The network posterior is the proposal: ``p(y) ≈ mean_i p(y | θ_i) p(θ_i) / q(θ_i | y)``.
+    Unbiased for ``p(y)`` and consistent for its log; reliable when the ESS is not
+    tiny. Comparing models through these estimates checks the amortized classifier
+    against the exact likelihood.
+    """
+    _, log_weights = _importance_weights(amortizer, data, num_proposals, seed)
+    top = log_weights.max()
+    weights = np.exp(log_weights - top)
+    ess = weights.sum() ** 2 / np.sum(weights**2)
+    return float(top + np.log(weights.mean())), float(ess)
 
 
 def nuts_refine(

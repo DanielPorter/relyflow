@@ -10,6 +10,8 @@ ROADMAP.md; check it to see what stage the project is at.
 - Tests: `.venv/bin/pytest` (fast; slow tests deselected by default); `.venv/bin/pytest -m slow`
 - Train: `python -m relyflow.inference train --model <name> --out checkpoints/<name>`
 - Validate: `python -m relyflow.diagnostics validate checkpoints/<name> --out docs/validation/<name>`
+- Model comparison: `KERAS_BACKEND=torch python -m relyflow.comparison train --out checkpoints/comparison`,
+  then `python -m relyflow.diagnostics compare checkpoints/comparison --out docs/validation/comparison --amortizers checkpoints`
   (about 10–40 min per model; run in the background under `caffeinate -i`)
 - Lint/format: `.venv/bin/ruff check . && .venv/bin/ruff format .`
 
@@ -27,7 +29,10 @@ ROADMAP.md; check it to see what stage the project is at.
   `models/` exactly (`tests/test_mcmc.py`)
 - `src/relyflow/diagnostics/`: recovery/SBC (`calibration.py`), posterior predictive checks
   (`ppc.py`), NUTS benchmark (`benchmark.py`, workers in `relyflow/_workers.py`), the
-  `validate` orchestrator; reports in `docs/validation/`
+  `validate` orchestrator; reports in `docs/validation/`; model-comparison validation
+  (`comparison.py`) with misspecified generators (`misspecification.py`)
+- `src/relyflow/comparison/`: model-comparison classifier (`classifier.py`), prior and
+  posterior predictive misspecification checks (`ood.py`)
 - `checkpoints/`: local training outputs (git-ignored); set `RELYFLOW_WEIGHTS_DIR` to use them
 - `benchmarks/`: throughput scripts, run directly with Python
 - `docs/models/`: model specs with sources; keep them in sync with the priors in code

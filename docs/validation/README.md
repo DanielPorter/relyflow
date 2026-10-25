@@ -1,6 +1,8 @@
 # Validation results
 
-Generated with `python -m relyflow.diagnostics validate` (milestone 4). Each
+Generated with `python -m relyflow.diagnostics validate` (milestone 4). Model
+comparison and the out-of-distribution checks (milestone 5) are validated separately
+with `python -m relyflow.diagnostics compare`: see [comparison/](comparison/summary.md). Each
 folder holds a model's `summary.md`, `metrics.json`, SBC and recovery figures,
 and, where run, the NUTS benchmark tables. The `*-importance` folders validate
 importance-resampled posteriors (`relyflow.inference.refine.importance_resample`)

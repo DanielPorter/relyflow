@@ -95,13 +95,28 @@ the way, the LBA density was made stable deep in the truncation tail.
 
 ## 5. Model comparison and misspecification
 
-- [ ] Amortized model comparison returning posterior model probabilities (advisory vs.
-      reliance vs. learning), with calibration and a confusion matrix on simulated data.
-- [ ] Out-of-distribution check that flags data the simulators cannot plausibly produce,
-      e.g. by distance in the learned summary space from the training distribution.
+- [x] Amortized model comparison returning posterior model probabilities (advisory vs.
+      reliance vs. learning), with calibration and a confusion matrix on simulated data
+      (`relyflow.comparison.ModelComparison`, an evidence network).
+- [x] Out-of-distribution check that flags data the simulators cannot plausibly produce:
+      a prior predictive rank test in learned-summary plus statistic space with an exact
+      false-alarm rate (`ood_check`), and a posterior predictive check against the
+      fitted model (`posterior_predictive_check`).
+- [x] Cross-check of classifier probabilities against importance-sampled marginal
+      likelihoods (`relyflow.inference.refine.log_evidence`).
 
 **Done when** model probabilities are calibrated on held-out simulations and the OOD
 check catches deliberately misspecified data at a documented false-alarm rate.
+
+**Outcome** ([report](docs/validation/comparison/summary.md)): on 3,000 held-out
+simulations, model probabilities are calibrated (ECE 0.009, accuracy 0.73; errors are
+mostly nested models with negligible excitation or learning, for which the data cannot
+decide). They agree with the exact likelihood (same most probable model for 90% of
+operators, log Bayes factor correlation 0.94 for reliance vs. advisory and 0.80 for
+learning vs. reliance). At alpha = 0.05, the two checks together flag 4% of operators
+simulated from the models, and catch 50–95% of six misspecified generators (lapses,
+random responding, always following the aid, a diffusion model with start-point bias,
+fatigue, a slow task).
 
 ## 6. Per-operator fitting interface and reports
 
