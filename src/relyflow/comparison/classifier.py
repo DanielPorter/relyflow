@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import json
 import time
+import warnings
 from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 
@@ -24,6 +25,7 @@ import numpy as np
 
 import relyflow
 from relyflow.data import TrialData
+from relyflow.inference import pretrained
 from relyflow.inference.designs import DesignPrior
 from relyflow.inference.features import design_features, learning_statistics, network_inputs
 from relyflow.inference.training import model_signature
@@ -140,11 +142,31 @@ class ModelComparison:
         self.models = config.models
 
     @classmethod
-    def load(cls, directory: str | Path) -> ModelComparison:
-        directory = Path(directory)
+    def load(cls, name_or_path: str | Path = pretrained.COMPARISON) -> ModelComparison:
+        """Load the pretrained network (``"comparison"``, the default; downloaded on first
+        use, see ``relyflow.inference.pretrained``) or a directory saved by :func:`train`."""
+        if name_or_path == pretrained.COMPARISON:
+            name_or_path = pretrained.fetch(pretrained.COMPARISON)
+        directory = Path(name_or_path)
         saved = json.loads((directory / "config.json").read_text())
+        config = ComparisonConfig.from_dict(saved["config"])
+        signatures = json.loads(
+            json.dumps({name: model_signature(get_model(name)) for name in config.models})
+        )
+        changed = [
+            name
+            for name in config.models
+            if saved["metadata"]["model_signatures"].get(name) != signatures[name]
+        ]
+        if changed:
+            warnings.warn(
+                f"The parameters or priors of {changed} have changed since this "
+                "model-comparison network was trained. Its probabilities are for the old "
+                "models; retrain it.",
+                stacklevel=2,
+            )
         approximator = keras.saving.load_model(directory / "classifier.keras")
-        return cls(approximator, ComparisonConfig.from_dict(saved["config"]), saved["metadata"])
+        return cls(approximator, config, saved["metadata"])
 
     def estimate_batch(self, stimulus, advice, choice, rt) -> dict[str, np.ndarray]:
         """Posterior model probabilities ``(n, n_models)``, log Bayes factors relative to

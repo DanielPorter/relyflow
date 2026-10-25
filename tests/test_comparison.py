@@ -16,14 +16,19 @@ from relyflow.inference import train as train_amortizer
 
 
 @pytest.fixture(scope="module")
-def tiny_comparison(tmp_path_factory):
+def comparison_dir(tmp_path_factory):
     out = tmp_path_factory.mktemp("comparison")
     config = ComparisonConfig(
         epochs=1, steps_per_epoch=2, batch_size=12, summary_dim=4, validation_sims=12,
         design=DesignPrior(n_trials=(60, 90), n_trials_step=30),
     )  # fmt: skip
     train(config, out, verbose=0)
-    return ModelComparison.load(out)
+    return out
+
+
+@pytest.fixture(scope="module")
+def tiny_comparison(comparison_dir):
+    return ModelComparison.load(comparison_dir)
 
 
 @pytest.fixture(scope="module")
@@ -52,6 +57,33 @@ def test_model_probabilities_cover_all_models_and_sum_to_one(tiny_comparison):
     assert list(probs) == ["advisory", "reliance", "learning"]
     assert sum(probs.values()) == pytest.approx(1.0, abs=1e-5)
     assert all(0 <= p <= 1 for p in probs.values())
+
+
+def test_pretrained_comparison_network_downloads_and_loads(comparison_dir, tmp_path, monkeypatch):
+    from relyflow.inference import pretrained
+
+    archive = tmp_path / "relyflow-comparison.zip"
+    digest = pretrained.package(comparison_dir, archive)
+    monkeypatch.delenv("RELYFLOW_WEIGHTS_DIR", raising=False)
+    monkeypatch.setenv("RELYFLOW_CACHE", str(tmp_path / "cache"))
+    monkeypatch.setattr(pretrained.urllib.request, "urlopen", lambda url: archive.open("rb"))
+    monkeypatch.setitem(pretrained.REGISTRY, "comparison", ("weights-test", archive.name, digest))
+    comparison = ModelComparison.load()
+    assert list(comparison.models) == ["advisory", "reliance", "learning"]
+    assert (tmp_path / "cache" / "weights-test" / "comparison" / "classifier.keras").exists()
+
+
+def test_loading_warns_when_model_priors_changed(comparison_dir, tmp_path):
+    import json
+    import shutil
+
+    copy = tmp_path / "stale"
+    shutil.copytree(comparison_dir, copy)
+    saved = json.loads((copy / "config.json").read_text())
+    saved["metadata"]["model_signatures"]["reliance"] = {"changed": True}
+    (copy / "config.json").write_text(json.dumps(saved))
+    with pytest.warns(UserWarning, match=r"\['reliance'\].*retrain"):
+        ModelComparison.load(copy)
 
 
 def test_ood_check_returns_a_valid_p_value(tiny_comparison):

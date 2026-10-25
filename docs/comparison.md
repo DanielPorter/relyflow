@@ -10,7 +10,7 @@ operator's data, assuming equal prior odds:
 ```python
 from relyflow.comparison import ModelComparison
 
-comparison = ModelComparison.load("checkpoints/comparison")
+comparison = ModelComparison.load()  # pretrained; downloads once, checks SHA-256
 comparison.probabilities(trial_data)
 # {"advisory": 0.08, "reliance": 0.81, "learning": 0.11}
 ```
@@ -36,11 +36,15 @@ and the 14 learning statistics. Trained with cross-entropy, its softmax outputs
 are posterior model probabilities. `estimate_batch` also returns log Bayes factors
 relative to the advisory model.
 
-Train with:
+The pretrained network (release `weights-v2`) was trained for 20,000 steps. To
+train your own, for example after changing a model's priors (loading warns when
+the priors no longer match the network), run:
 
 ```bash
 KERAS_BACKEND=torch python -m relyflow.comparison train --out checkpoints/comparison
 ```
+
+and load it with `ModelComparison.load("checkpoints/comparison")`.
 
 ### Exact cross-check
 
